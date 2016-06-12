@@ -97,7 +97,7 @@ func PrintBody(resp *http.Response) {
 
 	switch contentType {
 	case HTMLContentType:
-		err = highlight.HTML.Tokenise(resp.Body, tokens)
+		err = highlight.HTML.Tokenize(resp.Body, tokens)
 		if err != io.EOF {
 			log.Fatalln(err)
 		}
