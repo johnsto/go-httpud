@@ -10,12 +10,20 @@ import (
 var Debug bool = false
 
 type Rule struct {
+	// Regexp is the regular expression this rule should match against.
 	Regexp string
-	Type   TokenType
-	Types  []TokenType
-	State  string
+	// Type is the token type for strings that match this rule.
+	Type TokenType
+	// Types contains an ordered array of token types matching the order
+	// of groups in the Regexp expression.
+	Types []TokenType
+	// State indicates the next state to migrate to if this rule is triggered.
+	State string
+	// Extend indicates whether the matched value should be appended to
+	// the previously-matched token if it's of the same type.
 	Extend bool
 
+	// re is the cached regular expression.
 	re *regexp.Regexp
 }
 
@@ -27,6 +35,8 @@ type Lexer struct {
 	StateMap
 }
 
+// Token represents one item of parsed output, containing the parsed value
+// and its detected type.
 type Token struct {
 	Value string
 	Type  TokenType

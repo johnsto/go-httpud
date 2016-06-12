@@ -31,9 +31,7 @@ func main() {
 		},
 	}
 
-	log.Println("headers", req.Header)
 	PrintHeaders(req.Header)
-	fmt.Println()
 
 	resp, err := client.Do(req)
 
