@@ -10,12 +10,22 @@ func (s *Stack) Push(v string) {
 
 // Peek returns the item on the top of the stack, but does not pop it.
 func (s Stack) Peek() string {
+	if len(s) == 0 {
+		return ""
+	}
 	return s[len(s)-1]
 }
 
 // Pop removes and returns  the item on the top of the stack.
 func (s *Stack) Pop() string {
+	if len(*s) == 0 {
+		return ""
+	}
 	top := s.Peek()
 	*s = (*s)[0 : len(*s)-1]
 	return top
+}
+
+func (s *Stack) Empty() {
+	*s = []string{}
 }

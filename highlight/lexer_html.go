@@ -7,6 +7,7 @@ var HTML = Lexer{
 	StateMap: StateMap{
 		"root": {
 			{Regexp: "[^<&]", Type: Text, Extend: true},
+			{Regexp: "&\\S+?;", Type: Entity, Extend: false},
 			{Regexp: "<!--", Type: Comment, State: "comment"},
 			{Regexp: "<![^>]*>", Type: Entity},
 			{Regexp: "(</?)([\\w-]*:?[\\w-]+)(\\s*)(>)",
@@ -20,11 +21,11 @@ var HTML = Lexer{
 			{Regexp: "[^-]+", Type: Comment, Extend: true},
 		},
 		"tag": {
-			{Regexp: "[\\w-]+\\s+", Type: Attribute, Extend: true},
 			{Regexp: "([\\w-]+)(=)(\\s*)",
 				Types:  []TokenType{Attribute, Operator, Text},
 				Extend: true,
 				State:  "tagAttr"},
+			{Regexp: "[\\w-]+\\s*", Type: Attribute, Extend: true},
 			{Regexp: "\\s+", Type: Entity, Extend: true},
 			{Regexp: "(/?)(\\s*)(>)",
 				Types:  []TokenType{Punctuation, Entity, Punctuation},

@@ -8,6 +8,13 @@ func Register(t Tokenizer) {
 
 // GetTokenizerForContentType returns a Tokenizer for the given content type
 // (e.g. "text/html" or "application/json"), or nil if one is not found.
-func GetTokenizerForContentType(contentType string) Tokenizer {
-	return nil
+func GetTokenizerForContentType(contentType string) (Tokenizer, error) {
+	for _, tokenizer := range tokenizers {
+		if matched, err := tokenizer.AcceptsMediaType(contentType); err != nil {
+			return nil, err
+		} else if matched {
+			return tokenizer, nil
+		}
+	}
+	return nil, nil
 }

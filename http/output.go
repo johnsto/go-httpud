@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -70,42 +72,43 @@ func PrintBody(resp *http.Response) {
 
 	var err error
 
+	m := map[highlight.TokenType]Color{
+		highlight.Attribute:   ColorAttribute,
+		highlight.Comment:     ColorComment,
+		highlight.Entity:      ColorOperator,
+		highlight.Operator:    ColorOperator,
+		highlight.Punctuation: ColorPunctuation,
+		highlight.Separator:   ColorOperator,
+		highlight.String:      ColorString,
+		highlight.Text:        ColorText,
+	}
+
 	tokens := make(chan highlight.Token)
 	go func() {
 		for token := range tokens {
-			c := string(token.Value)
-			switch token.Type {
-			case highlight.Separator:
-				ColorOperator.Print(c)
-			case highlight.Operator:
-				ColorOperator.Print(c)
-			case highlight.Attribute:
-				ColorAttribute.Print(c)
-			case highlight.Entity:
-				ColorOperator.Print(c)
-			case highlight.Punctuation:
-				ColorPunctuation.Print(c)
-			case highlight.Comment:
-				ColorComment.Print(c)
-			case highlight.String:
-				ColorString.Print(c)
-			default:
-				ColorText.Print(c)
+			c, ok := m[token.Type]
+			if !ok {
+				c = ColorNormal
 			}
+			c.Print(token.Value)
 		}
 	}()
 
-	switch contentType {
-	case HTMLContentType:
-		err = highlight.HTML.Tokenize(resp.Body, tokens)
+	tokenizer, err := highlight.GetTokenizerForContentType(contentType)
+	if err != nil {
+		fmt.Printf("error getting tokenizer: %s", err)
+	}
+
+	if tokenizer != nil {
+		// Run body through tokenizer
+		err = tokenizer.Tokenize(resp.Body, tokens)
 		if err != io.EOF {
 			log.Fatalln(err)
 		}
-		/*case JSONContentType:
-		err = highlight.JSON.Tokenise(resp.Body, tokens)
-		if err != io.EOF {
-			log.Fatalln(err)
-		}*/
+	} else {
+		// Echo response body to stdout verbatim
+		w := bufio.NewWriter(os.Stdout)
+		w.ReadFrom(resp.Body)
 	}
 
 }
