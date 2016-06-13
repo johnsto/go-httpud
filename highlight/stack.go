@@ -26,6 +26,7 @@ func (s *Stack) Pop() string {
 	return top
 }
 
+// Empty removes all elements from the stack.
 func (s *Stack) Empty() {
 	*s = []string{}
 }

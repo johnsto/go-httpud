@@ -9,6 +9,22 @@ import (
 	"regexp"
 )
 
+// Lexer defines a simple state-based lexer.
+type Lexer struct {
+	StateMap
+	Name      string
+	Filenames []string
+	MimeTypes []string
+}
+
+// StateMap is a map of states to their names. A StateMap should typically
+// contain at least one "root" State.
+type StateMap map[string]State
+
+// State is a list of matching Rules.
+type State []*Rule
+
+// Rule describes the conditions required to match some subject text.
 type Rule struct {
 	// Regexp is the regular expression this rule should match against.
 	Regexp string
@@ -25,17 +41,6 @@ type Rule struct {
 
 	// re is the cached regular expression.
 	re *regexp.Regexp
-}
-
-type State []*Rule
-
-type StateMap map[string]State
-
-type Lexer struct {
-	StateMap
-	Name      string
-	Filenames []string
-	MimeTypes []string
 }
 
 // Tokenize reads from the given input and emits tokens to the output channel.
@@ -117,6 +122,13 @@ func (l Lexer) AcceptsMediaType(media string) (bool, error) {
 
 }
 
+// Match tests the subject text against all rules within the State. If a match
+// is found, it returns the number of characters consumed, a series of tokens
+// consumed from the subject text, and the specific Rule that was succesfully
+// matched against.
+//
+// If no rule was matched, the output will match the entire length of the
+// input text, emitted as an Error token with no corresponding Rule.
 func (s *State) Match(subject string) (int, []Token, *Rule) {
 	var earliestPos int = len(subject)
 	var earliestRule *Rule
@@ -160,6 +172,10 @@ func (m *Rule) Find(subject string) int {
 
 // Match attempts to match against the beginning of the given search string.
 // Returns the number of characters matched, and an array of tokens.
+//
+// If the regular expression contains groups, they will be matched with the
+// corresponding token type in `Rule.Types`. Any text inbetween groups will
+// be returned using the token type defined by `Rule.Type`.
 func (m *Rule) Match(subject string) (int, []Token) {
 	// Compile (and cache) regexp if not done already
 	if m.re == nil {
@@ -185,9 +201,18 @@ func (m *Rule) Match(subject string) (int, []Token) {
 
 	// Multiple groups; construct array of group values and tokens
 	tokens := []Token{}
+	var start, end int = 0, 0
 	for i := 2; i < len(indices); i += 2 {
-		start, end := indices[i], indices[i+1]
-		tokens = append(tokens, Token{subject[start:end], m.Types[(i-2)/2]})
+		// Extract text between submatches
+		sep := subject[end:indices[i]]
+		if sep != "" {
+			// Append to output
+			tokens = append(tokens, Token{sep, m.Type})
+		}
+		// Extract submatch text
+		start, end = indices[i], indices[i+1]
+		tokenType := m.Types[(i-2)/2]
+		tokens = append(tokens, Token{subject[start:end], tokenType})
 	}
 
 	return n, tokens
