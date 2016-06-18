@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -16,6 +18,12 @@ var (
 func main() {
 	cmd := NewCommand()
 	err := cmd.ParseArgs(os.Args[1:])
+
+	if err == pflag.ErrHelp {
+		cmd.Usage()
+		return
+	}
+
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -43,6 +51,8 @@ func main() {
 	default:
 		log.Fatalln(err)
 	}
+
+	defer resp.Body.Close()
 
 	if cmd.HeadersOnly || !cmd.BodyOnly {
 		PrintStatusLine(resp)

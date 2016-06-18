@@ -93,7 +93,7 @@ func (s State) Match(subject string) (int, Rule, []Token) {
 
 	if earliestPos > 0 {
 		// Return part of subject that doesn't match
-		return earliestPos, nil, []Token{{Value: subject, Type: Error}}
+		return earliestPos, nil, nil
 	}
 
 	// Return matching part

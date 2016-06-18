@@ -45,11 +45,19 @@ func (l Lexer) Tokenize(r io.Reader, ch chan<- Token) error {
 		stateName := stack.Peek()
 		state := states.Get(stateName)
 		n, rule, tokens := state.Match(line)
+
+		if tokens == nil {
+			// No match found; treat as error instead
+			tokens = []Token{{Value: line, Type: Error}}
+		}
+
+		// Emit each token to the output
 		for _, t := range tokens {
 			t.State = stateName
 			ch <- t
 		}
 
+		// Update state
 		if rule == nil {
 			// Didn't match at all, reset to root state
 			stack.Empty()

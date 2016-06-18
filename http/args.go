@@ -7,10 +7,11 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 
-	"github.com/ogier/pflag"
+	"github.com/spf13/pflag"
 )
 
 const (
@@ -47,14 +48,35 @@ type Command struct {
 	BodyOnly        bool
 	FollowRedirects bool
 
+	ParamsAsJSON bool
+	ParamsAsForm bool
+
 	BasicAuth string
+
+	flags *pflag.FlagSet
 }
 
 func NewCommand() *Command {
-	return &Command{
+	c := Command{
 		Method:  "GET",
 		Headers: http.Header{},
+		flags:   pflag.NewFlagSet("http", pflag.ExitOnError),
 	}
+
+	fs := c.flags
+
+	fs.BoolVar(&c.ParamsAsJSON, "json", false,
+		"send parameters as JSON document")
+	fs.BoolVar(&c.ParamsAsForm, "form", false,
+		"send parameters as URL-encoded form")
+
+	fs.BoolVar(&c.HeadersOnly, "headers", false, "only emit response headers")
+	fs.BoolVar(&c.BodyOnly, "body", false, "only emit response body")
+
+	fs.StringVar(&c.BasicAuth, "auth", "", "HTTP basic auth (user[:pass])")
+	fs.BoolVar(&c.FollowRedirects, "follow", false, "follow HTTP redirects")
+
+	return &c
 }
 
 func (c *Command) ParseArgs(args []string) error {
@@ -89,33 +111,28 @@ func (c *Command) ParseArgs(args []string) error {
 			}
 		}
 	}
+
+	if section != "params" {
+		// No URL specified on command line
+		return pflag.ErrHelp
+	}
+
 	return nil
 }
 
 func (c *Command) ParseFlags(args []string) ([]string, error) {
-	fs := pflag.NewFlagSet("http", pflag.ExitOnError)
-
-	json := fs.Bool("json", false, "")
-	form := fs.Bool("form", false, "")
-
-	fs.BoolVar(&c.HeadersOnly, "headers", false, "")
-	fs.BoolVar(&c.BodyOnly, "body", false, "")
-
-	fs.StringVar(&c.BasicAuth, "auth", "", "[user[:pass]")
-	fs.BoolVar(&c.FollowRedirects, "follow", false, "follow redirects")
-
-	if err := fs.Parse(args); err != nil {
+	if err := c.flags.Parse(args); err != nil {
 		return nil, err
 	}
 
-	if *json {
+	if c.ParamsAsJSON {
 		c.Headers.Set("Content-Type", JSONContentType)
 		c.Headers.Set("Accept", "*/*")
-	} else if *form {
+	} else if c.ParamsAsForm {
 		c.Headers.Set("Content-Type", FormContentType)
 	}
 
-	return fs.Args(), nil
+	return c.flags.Args(), nil
 }
 
 func (c *Command) ParseMethod(arg string) bool {
@@ -165,6 +182,11 @@ func (c *Command) ParseParam(arg string) (bool, error) {
 	} else {
 		return false, fmt.Errorf("unknown argument: %s\n", arg)
 	}
+}
+
+func (c *Command) Usage() {
+	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+	c.flags.PrintDefaults()
 }
 
 func (c *Command) Request() (*http.Request, error) {
