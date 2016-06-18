@@ -9,10 +9,11 @@ var (
 	ColorAttribute   = NewColor(color.FgHiGreen)
 	ColorNumber      = NewColor(color.FgHiBlue)
 	ColorText        = NewColor(color.FgWhite)
-	ColorPunctuation = NewColor(color.FgWhite)
+	ColorPunctuation = NewColor(color.FgWhite, color.Faint)
 	ColorComment     = NewColor(color.FgHiBlack)
 	ColorStatus      = NewColor(color.FgHiGreen)
 	ColorString      = NewColor(color.FgHiYellow)
+	ColorError       = NewColor(color.FgWhite, color.BgRed)
 )
 
 type Color []color.Attribute

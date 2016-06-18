@@ -1,23 +1,62 @@
 package highlight
 
-/*var JSON = Lexer{
-	StateMap: StateMap{
+var LexerJSON = Lexer{
+	Name:      "JSON",
+	MimeTypes: []string{"application/json"},
+	Filenames: []string{"*.json"},
+	States: StatesSpec{
 		"root": {
-			{Regexp: "{", Type: Separator, State: "object"},
-			{Regexp: "\\[", Type: Separator, State: "array"},
-			{Regexp: "\\s*", Type: Text},
+			{Include: "value"},
+		},
+		"whitespace": {
+			{Regexp: "\\s+", Type: Text},
+		},
+		"boolean": {
+			{Regexp: "(true|false|null)", Type: Constant},
+		},
+		"number": {
+			// -123.456e+78
+			{Regexp: "-?[0-9]+\\.?[0-9]*[eE][\\+\\-]?[0-9]+", Type: Number},
+			// -123.456
+			{Regexp: "-?[0-9]+\\.[0-9]+", Type: Number},
+			// -123
+			{Regexp: "-?[0-9]+", Type: Number},
+		},
+		"string": {
+			{Regexp: "(\")([^\"]*)(\")",
+				SubTypes: []TokenType{Punctuation, String, Punctuation}},
+		},
+		"value": {
+			{Include: "whitespace"},
+			{Include: "boolean"},
+			{Include: "number"},
+			{Include: "string"},
+			{Regexp: "{", Type: Punctuation, State: "object"},
+			{Regexp: "\\[", Type: Punctuation, State: "array"},
 		},
 		"object": {
-			{Regexp: "\".*\"", Type: Entity},
-			{Regexp: ":", Type: Separator},
-			{Regexp: "}", Type: Separator, State: "#pop"},
-			{Regexp: "\\s*", Type: Text},
+			{Include: "whitespace"},
+			{Regexp: "(\")([^\"]*)(\")\\s*(:)",
+				SubTypes: []TokenType{Punctuation, String, Punctuation,
+					Text, Assignment},
+				State: "objectValue"},
+			{Regexp: "}", Type: Punctuation, State: "#pop"},
+		},
+		"objectValue": {
+			{Include: "whitespace"},
+			{Include: "value"},
+			{Regexp: ",", Type: Punctuation, State: "#pop"},
+			{Regexp: "}", Type: Punctuation, State: "#pop #pop"},
 		},
 		"array": {
-			{Regexp: "\".*\"", Type: Entity},
-			{Regexp: ",", Type: Separator},
-			{Regexp: "\\]", Type: Separator, State: "#pop"},
-			{Regexp: "\\s*", Type: Text},
+			{Include: "whitespace"},
+			{Include: "value"},
+			{Regexp: ",", Type: Punctuation, State: "#pop"},
+			{Regexp: "\\]", Type: Punctuation, State: "#pop"},
 		},
 	},
-}*/
+}
+
+func init() {
+	Register(LexerJSON)
+}

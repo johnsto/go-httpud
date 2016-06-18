@@ -73,19 +73,23 @@ func PrintBody(resp *http.Response) {
 	var err error
 
 	m := map[highlight.TokenType]Color{
-		highlight.Attribute:   ColorAttribute,
+		highlight.Error:       ColorError,
 		highlight.Comment:     ColorComment,
-		highlight.Entity:      ColorOperator,
+		highlight.Text:        ColorText,
+		highlight.Number:      ColorString,
+		highlight.String:      ColorString,
+		highlight.Attribute:   ColorAttribute,
+		highlight.Assignment:  ColorOperator,
 		highlight.Operator:    ColorOperator,
 		highlight.Punctuation: ColorPunctuation,
-		highlight.Separator:   ColorOperator,
-		highlight.String:      ColorString,
-		highlight.Text:        ColorText,
+		highlight.Constant:    ColorOperator,
+		highlight.Entity:      ColorOperator,
 	}
 
 	tokens := make(chan highlight.Token)
 	go func() {
 		for token := range tokens {
+			//fmt.Printf("[%s] {%v} %s\n", token.State, token.Type, token.Value)
 			c, ok := m[token.Type]
 			if !ok {
 				c = ColorNormal

@@ -31,8 +31,6 @@ func main() {
 		},
 	}
 
-	PrintHeaders(req.Header)
-
 	resp, err := client.Do(req)
 
 	switch err := err.(type) {

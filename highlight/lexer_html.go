@@ -1,45 +1,45 @@
 package highlight
 
-var HTML = Lexer{
+var LexerHTML = Lexer{
 	Name:      "HTML",
 	MimeTypes: []string{"text/html", "application/xhtml+xml"},
 	Filenames: []string{"*.html", "*.htm", "*.xhtml"},
-	StateMap: StateMap{
+	States: StatesSpec{
 		"root": {
-			{Regexp: "[^<&]", Type: Text, Extend: true},
-			{Regexp: "&\\S+?;", Type: Entity, Extend: false},
+			{Regexp: "[^<&]+", Type: Text},
+			{Regexp: "&\\S+?;", Type: Entity},
 			{Regexp: "<!--", Type: Comment, State: "comment"},
-			{Regexp: "<![^>]*>", Type: Entity},
+			{Regexp: "(<)(![^>]*)(>)",
+				SubTypes: []TokenType{Punctuation, Entity, Punctuation}},
 			{Regexp: "(</?)([\\w-]*:?[\\w-]+)(\\s*)(>)",
-				Types: []TokenType{Punctuation, Entity, Text, Punctuation}},
+				SubTypes: []TokenType{Punctuation, Entity, Text, Punctuation}},
 			{Regexp: "(<)([\\w-]*:?[\\w-]+)(\\s*)",
-				Types: []TokenType{Punctuation, Entity, Text},
-				State: "tag"},
+				SubTypes: []TokenType{Punctuation, Entity, Text},
+				State:    "tag"},
 		},
 		"comment": {
-			{Regexp: "-->", Type: Comment, State: "#pop", Extend: true},
-			{Regexp: "[^-]+", Type: Comment, Extend: true},
+			{Regexp: "-->", Type: Comment, State: "#pop"},
+			{Regexp: "[^-]+", Type: Comment},
 		},
 		"tag": {
 			{Regexp: "([\\w-]+)(=)(\\s*)",
-				Types:  []TokenType{Attribute, Operator, Text},
-				Extend: true,
-				State:  "tagAttr"},
-			{Regexp: "[\\w-]+\\s*", Type: Attribute, Extend: true},
-			{Regexp: "\\s+", Type: Entity, Extend: true},
+				SubTypes: []TokenType{Attribute, Operator, Text},
+				State:    "tagAttr"},
+			{Regexp: "[\\w-]+\\s*", Type: Attribute},
+			{Regexp: "\\s+", Type: Entity},
 			{Regexp: "(/?)(\\s*)(>)",
-				Types:  []TokenType{Punctuation, Entity, Punctuation},
-				State:  "#pop",
-				Extend: true},
+				SubTypes: []TokenType{Punctuation, Entity, Punctuation},
+				State:    "#pop",
+			},
 		},
 		"tagAttr": {
-			{Regexp: "\"[^\"]*\"", Type: String, Extend: true, State: "#pop"},
-			{Regexp: "'[^']*'", Type: String, Extend: true, State: "#pop"},
-			{Regexp: "\\w+", Type: String, Extend: true, State: "#pop"},
+			{Regexp: "\"[^\"]*\"", Type: String, State: "#pop"},
+			{Regexp: "'[^']*'", Type: String, State: "#pop"},
+			{Regexp: "\\w+", Type: String, State: "#pop"},
 		},
 	},
 }
 
 func init() {
-	Register(HTML)
+	Register(LexerHTML)
 }

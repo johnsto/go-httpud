@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -196,8 +195,6 @@ func (c *Command) Request() (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	log.Println(req.URL.String())
 
 	// Configure Basic Authentication parameters
 	if c.BasicAuth != "" {

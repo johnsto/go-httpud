@@ -9,6 +9,7 @@ var Debug bool = false
 type Token struct {
 	Value string
 	Type  TokenType
+	State string
 }
 
 // Tokenizer represents a type capable of tokenizing data from an input
