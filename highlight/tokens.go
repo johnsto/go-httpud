@@ -14,4 +14,5 @@ const (
 	Punctuation           = "punctuation"
 	Constant              = "constant"
 	Entity                = "entity"
+	Whitespace            = "whitespace"
 )

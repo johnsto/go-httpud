@@ -46,21 +46,23 @@ func TestRegexpRuleMatch(t *testing.T) {
 		// Non-matching
 		{"ab+c", Text, nil, "", -1, nil},
 		// Simple matching
-		{"ab+c", Text, nil, "abc", 3, []Token{{"abc", Text}}},
-		{"ab+c", Text, nil, "abbbc", 5, []Token{{"abbbc", Text}}},
+		{"ab+c", Text, nil, "abc", 3, []Token{{"abc", Text, ""}}},
+		{"ab+c", Text, nil, "abbbc", 5, []Token{{"abbbc", Text, ""}}},
 		// Non-matching subgroup
 		{"(b+)(c+)", Error, []TokenType{Text}, "bbb", -1, nil},
 		// Simple matching subgroup
 		{"(b+)(c+)", Error, []TokenType{Text, Text}, "bbcc", 4,
-			[]Token{{"bb", Text}, {"cc", Text}}},
-		{"(b+)(c+)", Error, nil, "bbcc", 4, []Token{{"bbcc", Error}}},
+			[]Token{{"bb", Text, ""}, {"cc", Text, ""}}},
+		{"(b+)(c+)", Error, nil, "bbcc", 4, []Token{{"bbcc", Error, ""}}},
 		// Subgroup with outliers
 		{"a(b+)cc(d+)", Error, []TokenType{Text, Text}, "abbccddd", 8,
-			[]Token{{"a", Error}, {"bb", Text}, {"cc", Error}, {"ddd", Text}}},
+			[]Token{{"a", Error, ""}, {"bb", Text, ""},
+				{"cc", Error, ""}, {"ddd", Text, ""}}},
 	} {
 		rule := NewRegexpRule(item.Regexp, item.Type, item.Types, nil)
-		n, _, tokens := rule.Match(item.Subject)
+		n, _, tokens, err := rule.Match(item.Subject)
 		description := fmt.Sprintf("%s - %s", item.Regexp, item.Subject)
+		assert.Nil(t, err, description)
 		assert.Equal(t, item.Length, n, description)
 		assert.Equal(t, len(item.Tokens), len(tokens), description)
 		assert.Equal(t, item.Tokens, tokens, description)

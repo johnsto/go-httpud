@@ -1,6 +1,7 @@
 package highlight
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -8,7 +9,7 @@ import (
 type (
 	Rule interface {
 		Find(subject string) (int, Rule)
-		Match(subject string) (int, Rule, []Token)
+		Match(subject string) (int, Rule, []Token, error)
 		Stack() []string
 	}
 
@@ -78,14 +79,14 @@ func (m RegexpRule) Find(subject string) (int, Rule) {
 // If the regular expression contains groups, they will be matched with the
 // corresponding token type in `Rule.Types`. Any text inbetween groups will
 // be returned using the token type defined by `Rule.Type`.
-func (r RegexpRule) Match(subject string) (int, Rule, []Token) {
+func (r RegexpRule) Match(subject string) (int, Rule, []Token, error) {
 	// Find match group and sub groups, returns an array of start/end offsets
 	// e.g. f(r/a(b+)c/g, "abbbc") = [0, 5, 1, 4]
 	indices := r.Regexp.FindStringSubmatchIndex(subject)
 
 	if indices == nil || indices[0] != 0 || indices[1] == 0 {
 		// Didn't match start of subject
-		return -1, nil, nil
+		return -1, nil, nil, nil
 	}
 
 	// Get position after final matched character
@@ -96,15 +97,24 @@ func (r RegexpRule) Match(subject string) (int, Rule, []Token) {
 		return n, r, []Token{{
 			Value: subject[:n],
 			Type:  r.Type,
-		}}
+		}}, nil
 	}
 
 	// Multiple groups; construct array of group values and tokens
 	tokens := []Token{}
 	var start, end int = 0, 0
 	for i := 2; i < len(indices); i += 2 {
+		prevEnd := end
+		start, end = indices[i], indices[i+1]
+
+		if start < 0 || end < 0 {
+			// Ignore empty submatch
+			end = prevEnd
+			continue
+		}
+
 		// Extract text between submatches
-		sep := subject[end:indices[i]]
+		sep := subject[prevEnd:start]
 		if sep != "" {
 			// Append to output
 			tokens = append(tokens, Token{
@@ -112,16 +122,22 @@ func (r RegexpRule) Match(subject string) (int, Rule, []Token) {
 				Type:  r.Type,
 			})
 		}
+
+		// Determine submatch token
+		j := (i - 2) / 2
+		if j >= len(r.SubTypes) {
+			return n, r, tokens, fmt.Errorf("not enough subtypes for group")
+		}
+		tokenType := r.SubTypes[j]
+
 		// Extract submatch text
-		start, end = indices[i], indices[i+1]
-		tokenType := r.SubTypes[(i-2)/2]
 		tokens = append(tokens, Token{
 			Value: subject[start:end],
 			Type:  tokenType,
 		})
 	}
 
-	return n, r, tokens
+	return n, r, tokens, nil
 }
 
 func (r RegexpRule) Stack() []string {
@@ -133,7 +149,7 @@ func (r IncludeRule) Find(subject string) (int, Rule) {
 	return state.Find(subject)
 }
 
-func (r IncludeRule) Match(subject string) (int, Rule, []Token) {
+func (r IncludeRule) Match(subject string) (int, Rule, []Token, error) {
 	state := r.StateMap.Get(r.StateName)
 	return state.Match(subject)
 }

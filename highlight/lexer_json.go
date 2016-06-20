@@ -9,7 +9,7 @@ var LexerJSON = Lexer{
 			{Include: "value"},
 		},
 		"whitespace": {
-			{Regexp: "\\s+", Type: Text},
+			{Regexp: "\\s+", Type: Whitespace},
 		},
 		"boolean": {
 			{Regexp: "(true|false|null)", Type: Constant},
@@ -23,7 +23,9 @@ var LexerJSON = Lexer{
 			{Regexp: "-?[0-9]+", Type: Number},
 		},
 		"string": {
-			{Regexp: "(\")([^\"]*)(\")",
+			{Regexp: "(\")(\")",
+				SubTypes: []TokenType{Punctuation, Punctuation}},
+			{Regexp: "(\")((?:[^\"]|\\\\|\\\")+)(\")",
 				SubTypes: []TokenType{Punctuation, String, Punctuation}},
 		},
 		"value": {
@@ -31,29 +33,39 @@ var LexerJSON = Lexer{
 			{Include: "boolean"},
 			{Include: "number"},
 			{Include: "string"},
-			{Regexp: "{", Type: Punctuation, State: "object"},
-			{Regexp: "\\[", Type: Punctuation, State: "array"},
+			{Include: "array"},
+			{Include: "object"},
 		},
 		"object": {
+			{Regexp: "{", Type: Punctuation, State: "objectKey"},
+		},
+		"objectKey": {
 			{Include: "whitespace"},
-			{Regexp: "(\")([^\"]*)(\")\\s*(:)",
+			{Regexp: "(\")((?:[^\"]|\\\\|\\\")+)(\")(\\s*)(:)",
 				SubTypes: []TokenType{Punctuation, String, Punctuation,
-					Text, Assignment},
+					Whitespace, Assignment},
 				State: "objectValue"},
 			{Regexp: "}", Type: Punctuation, State: "#pop"},
 		},
 		"objectValue": {
 			{Include: "whitespace"},
 			{Include: "value"},
-			{Regexp: ",", Type: Punctuation, State: "#pop"},
-			{Regexp: "}", Type: Punctuation, State: "#pop #pop"},
+			{Regexp: ",", Type: Punctuation},
+			{Regexp: "}", Type: Punctuation, State: "#pop"},
 		},
 		"array": {
+			{Regexp: "\\[", Type: Punctuation, State: "arrayValue"},
+		},
+		"arrayValue": {
 			{Include: "whitespace"},
 			{Include: "value"},
-			{Regexp: ",", Type: Punctuation, State: "#pop"},
+			{Regexp: ",", Type: Punctuation},
 			{Regexp: "\\]", Type: Punctuation, State: "#pop"},
 		},
+	},
+	Filters: []Filter{
+		RemoveEmptiesFilter,
+		MergeTokensFilter,
 	},
 }
 

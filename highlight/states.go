@@ -75,7 +75,7 @@ func (s State) Find(subject string) (int, Rule) {
 //
 // If the start of the subject text can not be matched against any known rule,
 // it will be emitted as an "Error" token and a nil Rule.
-func (s State) Match(subject string) (int, Rule, []Token) {
+func (s State) Match(subject string) (int, Rule, []Token, error) {
 	var earliestPos int = len(subject)
 	var earliestRule Rule
 
@@ -93,7 +93,7 @@ func (s State) Match(subject string) (int, Rule, []Token) {
 
 	if earliestPos > 0 {
 		// Return part of subject that doesn't match
-		return earliestPos, nil, nil
+		return earliestPos, nil, nil, nil
 	}
 
 	// Return matching part

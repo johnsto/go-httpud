@@ -6,11 +6,13 @@ import (
 	"io"
 	"mime"
 	"path"
+	"strings"
 )
 
 // Lexer defines a simple state-based lexer.
 type Lexer struct {
 	States    States
+	Filters   []Filter
 	Name      string
 	Filenames []string
 	MimeTypes []string
@@ -21,7 +23,7 @@ type Lexer struct {
 // of input.
 func (l Lexer) Tokenize(r io.Reader, ch chan<- Token) error {
 	var err error
-	var line string
+	var subject string
 
 	states, err := l.States.Compile()
 	if err != nil {
@@ -32,23 +34,30 @@ func (l Lexer) Tokenize(r io.Reader, ch chan<- Token) error {
 
 	stack := &Stack{"root"}
 
-	for true {
+	for {
 		// Read next line if we've reached the end of the current one
-		if line == "" {
-			line, err = br.ReadString('\n')
-			if err != nil {
+		if subject == "" {
+			subject, err = br.ReadString('\n')
+			if subject == "" {
+				break
+			}
+
+			if err != nil && err != io.EOF {
 				break
 			}
 		}
 
-		// Match current state against current line
+		// Match current state against current subject
 		stateName := stack.Peek()
 		state := states.Get(stateName)
-		n, rule, tokens := state.Match(line)
+		n, rule, tokens, err := state.Match(subject)
+		if err != nil {
+			return err
+		}
 
 		if tokens == nil {
 			// No match found; treat as error instead
-			tokens = []Token{{Value: line, Type: Error}}
+			tokens = []Token{{Value: subject, Type: Error}}
 		}
 
 		// Emit each token to the output
@@ -72,11 +81,28 @@ func (l Lexer) Tokenize(r io.Reader, ch chan<- Token) error {
 			}
 		}
 
-		// Consume matched part of line
-		line = line[n:]
+		// Consume matched part
+		subject = subject[n:]
 	}
 
 	return err
+}
+
+func (l Lexer) TokenizeString(s string) ([]Token, error) {
+	r := strings.NewReader(s)
+	tokens := []Token{}
+	ch := make(chan Token, 0)
+	sem := make(chan bool)
+	go func() {
+		for token := range ch {
+			tokens = append(tokens, token)
+		}
+		sem <- true
+	}()
+	err := l.Tokenize(r, ch)
+	close(ch)
+	<-sem
+	return tokens, err
 }
 
 // AcceptsFilename returns true if this Lexer thinks it is suitable for the
