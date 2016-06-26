@@ -60,9 +60,8 @@ func (s State) Find(subject string) (int, Rule) {
 		}
 	}
 
-	if earliestPos > 0 {
-		// Return part of subject that doesn't match
-		return earliestPos, nil
+	if earliestRule == nil {
+		return -1, nil
 	}
 
 	return earliestPos, earliestRule
@@ -74,7 +73,7 @@ func (s State) Find(subject string) (int, Rule) {
 // matched against.
 //
 // If the start of the subject text can not be matched against any known rule,
-// it will be emitted as an "Error" token and a nil Rule.
+// it will return a position of -1 and a nil Rule.
 func (s State) Match(subject string) (int, Rule, []Token, error) {
 	var earliestPos int = len(subject)
 	var earliestRule Rule
@@ -94,6 +93,8 @@ func (s State) Match(subject string) (int, Rule, []Token, error) {
 	if earliestPos > 0 {
 		// Return part of subject that doesn't match
 		return earliestPos, nil, nil, nil
+	} else if earliestRule == nil {
+		return -1, nil, nil, nil
 	}
 
 	// Return matching part

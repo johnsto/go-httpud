@@ -1,6 +1,7 @@
 package highlight_test
 
 import (
+	"fmt"
 	"io"
 	"testing"
 
@@ -8,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLexerJSON(t *testing.T) {
+func TestLexerJSONSimple(t *testing.T) {
 	type simpleToken struct {
 		Value string
 		Type  TokenType
@@ -47,14 +48,14 @@ func TestLexerJSON(t *testing.T) {
 			{Value: `xyz`, Type: String},
 			{Value: `"`, Type: Punctuation},
 		}},
-		{"string", 9, `"\"xyz\""`, []Token{
+		{"string", 10, `"\"cats\""`, []Token{
 			{Value: `"`, Type: Punctuation},
-			{Value: `\"xyz\"`, Type: String},
+			{Value: `\"cats\"`, Type: String},
 			{Value: `"`, Type: Punctuation},
 		}},
-		{"string", 8, `"\t\n\r"`, []Token{
+		{"string", 26, `"escape\tall\nthe\rthings"`, []Token{
 			{Value: `"`, Type: Punctuation},
-			{Value: `\t\n\r`, Type: String},
+			{Value: `escape\tall\nthe\rthings`, Type: String},
 			{Value: `"`, Type: Punctuation},
 		}},
 	} {
@@ -63,7 +64,16 @@ func TestLexerJSON(t *testing.T) {
 		assert.Equal(t, item.Length, n, item.Subject)
 		assert.Equal(t, item.Tokens, tokens, item.Subject)
 	}
+}
 
+func TestLexerJSONComplex(t *testing.T) {
+	type simpleToken struct {
+		Value string
+		Type  TokenType
+	}
+
+	_, err := LexerJSON.States.Compile()
+	assert.Nil(t, err, "JSON lexer should compile")
 	for _, item := range []struct {
 		State   string
 		Subject string
@@ -71,6 +81,16 @@ func TestLexerJSON(t *testing.T) {
 	}{
 		{"array", "[]", []simpleToken{
 			{"[", Punctuation},
+			{"]", Punctuation},
+		}},
+		{"array", "[ ]", []simpleToken{
+			{"[", Punctuation},
+			{" ", Whitespace},
+			{"]", Punctuation},
+		}},
+		{"array", "[\n]", []simpleToken{
+			{"[", Punctuation},
+			{"\n", Whitespace},
 			{"]", Punctuation},
 		}},
 		{"array", "[null]", []simpleToken{
@@ -81,11 +101,6 @@ func TestLexerJSON(t *testing.T) {
 		{"array", "[123]", []simpleToken{
 			{"[", Punctuation},
 			{"123", Number},
-			{"]", Punctuation},
-		}},
-		{"array", "[ ]", []simpleToken{
-			{"[", Punctuation},
-			{" ", Text},
 			{"]", Punctuation},
 		}},
 		{"array", "[1,2]", []simpleToken{
@@ -99,7 +114,7 @@ func TestLexerJSON(t *testing.T) {
 			{"[", Punctuation},
 			{"1", Number},
 			{",", Punctuation},
-			{"\n", Text},
+			{"\n", Whitespace},
 			{"2", Number},
 			{"]", Punctuation},
 		}},
@@ -112,53 +127,68 @@ func TestLexerJSON(t *testing.T) {
 			{`"`, Punctuation},
 			{"key", String},
 			{`"`, Punctuation},
-			{"", Text},
+			{"", Whitespace},
 			{":", Assignment},
 			{`"`, Punctuation},
 			{"value", String},
 			{`"`, Punctuation},
 			{"}", Punctuation},
+		}},
+		{"object", `{"ke\ty":"v\nalu\re\""}`, []simpleToken{
+			{`{`, Punctuation},
+			{`"`, Punctuation},
+			{`ke\ty`, String},
+			{`"`, Punctuation},
+			{``, Whitespace},
+			{`:`, Assignment},
+			{`"`, Punctuation},
+			{`v\nalu\re\"`, String},
+			{`"`, Punctuation},
+			{`}`, Punctuation},
 		}},
 		{"object", `{ "key" : "value" }`, []simpleToken{
 			{"{", Punctuation},
-			{" ", Text},
+			{" ", Whitespace},
 			{`"`, Punctuation},
 			{"key", String},
 			{`"`, Punctuation},
-			{" ", Text},
+			{" ", Whitespace},
 			{":", Assignment},
-			{" ", Text},
+			{" ", Whitespace},
 			{`"`, Punctuation},
 			{"value", String},
 			{`"`, Punctuation},
-			{" ", Text},
+			{" ", Whitespace},
 			{"}", Punctuation},
 		}},
-		{"object", `{"a":"b","c":"d"}`, []simpleToken{
-			{"{", Punctuation},
+		{"object", `{"aa":"bb","cc":"dd"}`, []simpleToken{
+			{`{`, Punctuation},
 			{`"`, Punctuation},
-			{"a", String},
+			{`aa`, String},
 			{`"`, Punctuation},
-			{"", Text},
-			{":", Assignment},
+			{``, Whitespace},
+			{`:`, Assignment},
 			{`"`, Punctuation},
-			{"b", String},
+			{`bb`, String},
 			{`"`, Punctuation},
 			{`,`, Punctuation},
 			{`"`, Punctuation},
-			{"c", String},
+			{`cc`, String},
 			{`"`, Punctuation},
-			{"", Text},
-			{":", Assignment},
+			{``, Whitespace},
+			{`:`, Assignment},
 			{`"`, Punctuation},
-			{"d", String},
+			{`dd`, String},
 			{`"`, Punctuation},
-			{"}", Punctuation},
+			{`}`, Punctuation},
 		}},
 	} {
 		tokens, err := LexerJSON.TokenizeString(item.Subject)
-		assert.Equal(t, io.EOF, err)
-		assert.Equal(t, len(item.Tokens), len(tokens), item.Subject)
+		name := fmt.Sprintf("`%s` %v %v", item.Subject, tokens, err)
+		assert.Equal(t, io.EOF, err,
+			fmt.Sprintf("tokeniser should return EOF"))
+		assert.Equal(t, len(item.Tokens), len(tokens),
+			fmt.Sprintf("number of tokens in %#v should match", item.Subject))
 		for i, token := range tokens {
 			actualToken := Token{
 				Value: token.Value,
@@ -169,7 +199,8 @@ func TestLexerJSON(t *testing.T) {
 				Type:  item.Tokens[i].Type,
 			}
 			if i < len(item.Tokens) {
-				assert.Equal(t, expectedToken, actualToken, item.Subject)
+				assert.Equal(t, expectedToken, actualToken,
+					fmt.Sprintf("(%d) %s", i, name))
 			}
 		}
 	}

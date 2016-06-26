@@ -97,8 +97,8 @@ func TestIncludeRule(t *testing.T) {
 		{"root", "bbb", 0, sm["include2"][0]},
 		{"root", "ccc", 0, sm["root"][2]},
 		{"root", "ddd", 0, sm["include1"][1]},
-		{"root", "eee", 3, nil},
-		{"root", "eeeaaa", 3, nil},
+		{"root", "eee", -1, nil},
+		{"root", "eeeaaa", 3, sm["include2"][1]},
 	} {
 		description := fmt.Sprintf("%s - %s", item.State, item.Subject)
 		pos, rule := sm.Get(item.State).Find(item.Subject)

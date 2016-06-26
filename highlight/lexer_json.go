@@ -23,9 +23,9 @@ var LexerJSON = Lexer{
 			{Regexp: "-?[0-9]+", Type: Number},
 		},
 		"string": {
-			{Regexp: "(\")(\")",
+			{Regexp: `(")(")`,
 				SubTypes: []TokenType{Punctuation, Punctuation}},
-			{Regexp: "(\")((?:[^\"]|\\\\|\\\")+)(\")",
+			{Regexp: `(")((?:\\\"|[^\"])*?)(")`,
 				SubTypes: []TokenType{Punctuation, String, Punctuation}},
 		},
 		"value": {
@@ -41,7 +41,7 @@ var LexerJSON = Lexer{
 		},
 		"objectKey": {
 			{Include: "whitespace"},
-			{Regexp: "(\")((?:[^\"]|\\\\|\\\")+)(\")(\\s*)(:)",
+			{Regexp: `(")((?:\\\"|[^\"])*?)(")(\s*)(:)`,
 				SubTypes: []TokenType{Punctuation, String, Punctuation,
 					Whitespace, Assignment},
 				State: "objectValue"},
@@ -50,8 +50,8 @@ var LexerJSON = Lexer{
 		"objectValue": {
 			{Include: "whitespace"},
 			{Include: "value"},
-			{Regexp: ",", Type: Punctuation},
-			{Regexp: "}", Type: Punctuation, State: "#pop"},
+			{Regexp: ",", Type: Punctuation, State: "#pop"},
+			{Regexp: "}", Type: Punctuation, State: "#pop #pop"},
 		},
 		"array": {
 			{Regexp: "\\[", Type: Punctuation, State: "arrayValue"},
@@ -63,10 +63,10 @@ var LexerJSON = Lexer{
 			{Regexp: "\\]", Type: Punctuation, State: "#pop"},
 		},
 	},
-	Filters: []Filter{
+	/*Filters: []Filter{
 		RemoveEmptiesFilter,
 		MergeTokensFilter,
-	},
+	},*/
 }
 
 func init() {

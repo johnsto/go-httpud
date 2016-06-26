@@ -22,72 +22,88 @@ type Lexer struct {
 // Will end on any error from the reader, including io.EOF to signify the end
 // of input.
 func (l Lexer) Tokenize(r io.Reader, ch chan<- Token) error {
-	var err error
-	var subject string
-
 	states, err := l.States.Compile()
 	if err != nil {
 		return err
 	}
 
-	br := bufio.NewReader(r)
+	br := bufio.NewReaderSize(r, 128)
 
 	stack := &Stack{"root"}
-
+	eol := false
+	var subject = ""
 	for {
-		// Read next line if we've reached the end of the current one
-		if subject == "" {
-			subject, err = br.ReadString('\n')
-			if subject == "" {
-				break
-			}
+		next, err := br.ReadString('\n')
 
-			if err != nil && err != io.EOF {
-				break
-			}
-		}
-
-		// Match current state against current subject
-		stateName := stack.Peek()
-		state := states.Get(stateName)
-		n, rule, tokens, err := state.Match(subject)
-		if err != nil {
+		if err == bufio.ErrBufferFull {
+			eol = false
+		} else if err == io.EOF {
+			eol = true
+		} else if err != nil {
+			// something bad happened....
 			return err
 		}
 
-		if tokens == nil {
-			// No match found; treat as error instead
-			tokens = []Token{{Value: subject, Type: Error}}
+		subject = subject + next
+
+		if subject == "" && err == io.EOF {
+			return err
 		}
 
-		// Emit each token to the output
-		for _, t := range tokens {
-			t.State = stateName
-			ch <- t
-		}
+		for subject != "" {
+			// Match current state against current subject
+			stateName := stack.Peek()
+			state := states.Get(stateName)
 
-		// Update state
-		if rule == nil {
-			// Didn't match at all, reset to root state
-			stack.Empty()
-			stack.Push("root")
-		} else {
-			for _, state := range rule.Stack() {
-				if state == "#pop" {
-					stack.Pop()
-				} else if state != "" {
-					stack.Push(state)
+			// Tokenize input
+			n, rule, tokens, err := state.Match(subject)
+			if err != nil {
+				return err
+			}
+
+			// No rules matched
+			if n < 0 {
+				if !eol {
+					// Read more data for the current line
+					break
+				} else {
+					// Emit entire subject asn an error
+					tokens = []Token{{Value: subject, Type: Error}}
+					n = len(subject)
 				}
 			}
-		}
 
-		// Consume matched part
-		subject = subject[n:]
+			// Emit each token to the output
+			for _, t := range tokens {
+				t.State = stateName
+				ch <- t
+			}
+
+			// Update state
+			if rule == nil {
+				// Didn't match at all, reset to root state
+				stack.Empty()
+				stack.Push("root")
+			} else {
+				// Push new states as appropriate
+				for _, state := range rule.Stack() {
+					if state == "#pop" {
+						stack.Pop()
+					} else if state != "" {
+						stack.Push(state)
+					}
+				}
+			}
+
+			// Consume matched part
+			subject = subject[n:]
+		}
 	}
 
-	return err
+	return nil
 }
 
+// TokenizeString is a convenience method
 func (l Lexer) TokenizeString(s string) ([]Token, error) {
 	r := strings.NewReader(s)
 	tokens := []Token{}

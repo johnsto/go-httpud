@@ -16,34 +16,35 @@ func (f FilterFunc) Filter(lexer Lexer, in <-chan Token, out chan<- Token) error
 
 type Filters []Filter
 
-func (f Filters) Filter(lexer Lexer, in <-chan Token, out chan<- Token) error {
-	errChan := make(chan error, len(f))
-	defer close(errChan)
-
+func (fs Filters) Filter(lexer Lexer, in <-chan Token, out chan<- Token) error {
+	var prev <-chan Token
 	var next chan Token
-	var fin <-chan Token = in
-	var fout chan<- Token = out
+
+	errChan := make(chan error, len(fs))
+
+	prev = in
 
 	wg := sync.WaitGroup{}
-	wg.Add(len(f))
-	for i, filter := range f {
-		if i < len(f) {
-			next = make(chan Token)
-			fout = next
-		} else {
-			fout = out
-		}
-
-		go func(in <-chan Token, out chan<- Token) {
-			if err := filter.Filter(lexer, in, out); err != nil {
+	for i, f := range fs {
+		next = make(chan Token)
+		wg.Add(1)
+		go func(i int, f Filter, in <-chan Token, out chan<- Token) {
+			if err := f.Filter(lexer, in, out); err != nil {
 				errChan <- err
 			}
-			close(out)
 			wg.Done()
-		}(fin, fout)
-
-		fin = next
+			close(out)
+		}(i, f, prev, next)
+		prev = next
 	}
+
+	wg.Add(1)
+	go func(in <-chan Token, out chan<- Token) {
+		for t := range in {
+			out <- t
+		}
+		wg.Done()
+	}(prev, out)
 
 	wg.Wait()
 
@@ -67,7 +68,7 @@ var PassthroughFilter = FilterFunc(
 var RemoveEmptiesFilter = FilterFunc(
 	func(lexer Lexer, in <-chan Token, out chan<- Token) error {
 		for token := range in {
-			if token.Value == "" {
+			if token.Value != "" {
 				out <- token
 			}
 		}
