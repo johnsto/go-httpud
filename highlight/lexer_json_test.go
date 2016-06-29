@@ -134,6 +134,19 @@ func TestLexerJSONComplex(t *testing.T) {
 			{`"`, Punctuation},
 			{"}", Punctuation},
 		}},
+		{"object", "{\"key\":\n\"value\"}", []simpleToken{
+			{"{", Punctuation},
+			{`"`, Punctuation},
+			{"key", String},
+			{`"`, Punctuation},
+			{"", Whitespace},
+			{":", Assignment},
+			{"\n", Whitespace},
+			{`"`, Punctuation},
+			{"value", String},
+			{`"`, Punctuation},
+			{"}", Punctuation},
+		}},
 		{"object", `{"ke\ty":"v\nalu\re\""}`, []simpleToken{
 			{`{`, Punctuation},
 			{`"`, Punctuation},
@@ -182,6 +195,33 @@ func TestLexerJSONComplex(t *testing.T) {
 			{`"`, Punctuation},
 			{`}`, Punctuation},
 		}},
+		{"object", "{\"key\":[1,\"value\",{\"a\":\"b\"}]}", []simpleToken{
+			{"{", Punctuation},
+			{`"`, Punctuation},
+			{`key`, String},
+			{`"`, Punctuation},
+			{``, Whitespace},
+			{`:`, Assignment},
+			{"[", Punctuation},
+			{"1", Number},
+			{",", Punctuation},
+			{`"`, Punctuation},
+			{`value`, String},
+			{`"`, Punctuation},
+			{",", Punctuation},
+			{"{", Punctuation},
+			{`"`, Punctuation},
+			{"a", String},
+			{`"`, Punctuation},
+			{"", Whitespace},
+			{":", Assignment},
+			{`"`, Punctuation},
+			{"b", String},
+			{`"`, Punctuation},
+			{"}", Punctuation},
+			{"]", Punctuation},
+			{"}", Punctuation},
+		}},
 	} {
 		tokens, err := LexerJSON.TokenizeString(item.Subject)
 		name := fmt.Sprintf("`%s` %v %v", item.Subject, tokens, err)
@@ -190,6 +230,9 @@ func TestLexerJSONComplex(t *testing.T) {
 		assert.Equal(t, len(item.Tokens), len(tokens),
 			fmt.Sprintf("number of tokens in %#v should match", item.Subject))
 		for i, token := range tokens {
+			if i >= len(item.Tokens) {
+				break
+			}
 			actualToken := Token{
 				Value: token.Value,
 				Type:  token.Type,

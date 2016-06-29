@@ -18,3 +18,16 @@ func GetTokenizerForContentType(contentType string) (Tokenizer, error) {
 	}
 	return nil, nil
 }
+
+// GetTokenizerForFilename returns a Tokenizer for the given filename
+// (e.g. "index.html" or "jasons.json"), or nil if one is not found.
+func GetTokenizerForFilename(name string) (Tokenizer, error) {
+	for _, tokenizer := range tokenizers {
+		if matched, err := tokenizer.AcceptsFilename(name); err != nil {
+			return nil, err
+		} else if matched {
+			return tokenizer, nil
+		}
+	}
+	return nil, nil
+}

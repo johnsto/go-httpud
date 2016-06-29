@@ -42,7 +42,7 @@ var LexerJSON = Lexer{
 		"objectKey": {
 			{Include: "whitespace"},
 			{Regexp: `(")((?:\\\"|[^\"])*?)(")(\s*)(:)`,
-				SubTypes: []TokenType{Punctuation, String, Punctuation,
+				SubTypes: []TokenType{Punctuation, Attribute, Punctuation,
 					Whitespace, Assignment},
 				State: "objectValue"},
 			{Regexp: "}", Type: Punctuation, State: "#pop"},
