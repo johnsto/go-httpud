@@ -38,14 +38,17 @@ func main() {
 	}
 
 	tokens := make(chan highlight.Token)
+	done := make(chan bool)
 	go func() {
 		for token := range tokens {
 			output.Emit(token)
 		}
+		done <- true
 	}()
 	err = tokenizer.Tokenize(f, tokens)
-	close(tokens)
 	if err != nil && err != io.EOF {
 		log.Fatalln(err)
 	}
+	close(tokens)
+	<-done
 }

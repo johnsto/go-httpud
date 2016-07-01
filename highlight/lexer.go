@@ -12,7 +12,7 @@ import (
 // Lexer defines a simple state-based lexer.
 type Lexer struct {
 	States    States
-	Filters   []Filter
+	Filters   Filters
 	Name      string
 	Filenames []string
 	MimeTypes []string
@@ -21,13 +21,15 @@ type Lexer struct {
 // Tokenize reads from the given input and emits tokens to the output channel.
 // Will end on any error from the reader, including io.EOF to signify the end
 // of input.
-func (l Lexer) Tokenize(r io.Reader, ch chan<- Token) error {
+func (l Lexer) Tokenize(r io.Reader, out chan<- Token) error {
 	states, err := l.States.Compile()
 	if err != nil {
 		return err
 	}
 
 	br := bufio.NewReaderSize(r, 128)
+
+	pusher := l.Filters.PushFunc(l, out)
 
 	stack := &Stack{"root"}
 	eol := false
@@ -41,12 +43,14 @@ func (l Lexer) Tokenize(r io.Reader, ch chan<- Token) error {
 			eol = true
 		} else if err != nil {
 			// something bad happened....
+			out <- Token{}
 			return err
 		}
 
 		subject = subject + next
 
 		if subject == "" && err == io.EOF {
+			out <- Token{}
 			return err
 		}
 
@@ -58,6 +62,7 @@ func (l Lexer) Tokenize(r io.Reader, ch chan<- Token) error {
 			// Tokenize input
 			n, rule, tokens, err := state.Match(subject)
 			if err != nil {
+				out <- Token{}
 				return err
 			}
 
@@ -76,7 +81,10 @@ func (l Lexer) Tokenize(r io.Reader, ch chan<- Token) error {
 			// Emit each token to the output
 			for _, t := range tokens {
 				t.State = stateName
-				ch <- t
+				if err := pusher(t); err != nil {
+					out <- Token{}
+					return err
+				}
 			}
 
 			// Update state

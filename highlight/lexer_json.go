@@ -1,5 +1,9 @@
 package highlight
 
+import (
+	"strings"
+)
+
 var LexerJSON = Lexer{
 	Name:      "JSON",
 	MimeTypes: []string{"application/json"},
@@ -63,12 +67,70 @@ var LexerJSON = Lexer{
 			{Regexp: "\\]", Type: Punctuation, State: "#pop"},
 		},
 	},
-	/*Filters: []Filter{
+	Filters: []Filter{
 		RemoveEmptiesFilter,
-		MergeTokensFilter,
-	},*/
+		&FormatterJSON{Indent: "  "},
+	},
 }
 
+type FormatterJSON struct {
+	Indent string
+}
+
+func (f *FormatterJSON) Filter(lexer Lexer, in <-chan Token,
+	out chan<- Token) error {
+	//var lastState string
+	indents := 0
+	for token := range in {
+		indent := strings.Repeat(f.Indent, indents)
+
+		switch token.Type {
+		case Whitespace:
+			// we'll add our own whitespace, thanks!
+			continue
+		case Assignment:
+			switch token.Value {
+			case ":":
+				out <- token
+				out <- Token{Type: Whitespace, Value: " "}
+			default:
+				out <- token
+			}
+		case Punctuation:
+			switch token.Value {
+			case ",":
+				out <- token
+				out <- Token{Type: Whitespace, Value: "\n"}
+				out <- Token{Type: Whitespace, Value: indent}
+			case "{":
+				fallthrough
+			case "[":
+				out <- token
+				out <- Token{Type: Whitespace, Value: "\n"}
+				indents++
+				indent = strings.Repeat(f.Indent, indents)
+				out <- Token{Type: Whitespace, Value: indent}
+			case "}":
+				fallthrough
+			case "]":
+				out <- Token{Type: Whitespace, Value: "\n"}
+				indents--
+				indent = strings.Repeat(f.Indent, indents)
+				out <- Token{Type: Whitespace, Value: indent}
+				out <- token
+			case "\"":
+				out <- token
+			default:
+				out <- token
+			}
+		default:
+			out <- token
+		}
+
+		//lastState = token.State
+	}
+	return nil
+}
 func init() {
 	Register(LexerJSON)
 }

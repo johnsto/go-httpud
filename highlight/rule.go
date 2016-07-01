@@ -151,7 +151,11 @@ func (r IncludeRule) Find(subject string) (int, Rule) {
 
 func (r IncludeRule) Match(subject string) (int, Rule, []Token, error) {
 	state := r.StateMap.Get(r.StateName)
-	return state.Match(subject)
+	n, rl, ts, err := state.Match(subject)
+	for _, t := range ts {
+		t.State = r.StateName
+	}
+	return n, rl, ts, err
 }
 
 func (r IncludeRule) Stack() []string {
