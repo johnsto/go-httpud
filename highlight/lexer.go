@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log"
 	"mime"
 	"path"
 	"strings"
@@ -11,9 +12,9 @@ import (
 
 // Lexer defines a simple state-based lexer.
 type Lexer struct {
+	Name      string
 	States    States
 	Filters   Filters
-	Name      string
 	Filenames []string
 	MimeTypes []string
 }
@@ -44,14 +45,17 @@ func (l Lexer) Tokenize(r io.Reader, out chan<- Token) error {
 		} else if err != nil {
 			// something bad happened....
 			out <- Token{}
+			log.Println("STOP1", err)
 			return err
+		} else {
+			eol = strings.HasSuffix(subject, "\n")
 		}
 
 		subject = subject + next
 
 		if subject == "" && err == io.EOF {
-			out <- Token{}
-			return err
+			log.Println("STOP2", err)
+			return pusher(Token{})
 		}
 
 		for subject != "" {
@@ -61,13 +65,15 @@ func (l Lexer) Tokenize(r io.Reader, out chan<- Token) error {
 
 			// Tokenize input
 			n, rule, tokens, err := state.Match(subject)
+			//fmt.Println(subject, n, rule, tokens)
 			if err != nil {
 				out <- Token{}
+				log.Println("STOP3", err)
 				return err
 			}
 
 			// No rules matched
-			if n < 0 {
+			if rule == nil {
 				if !eol {
 					// Read more data for the current line
 					break
@@ -83,6 +89,7 @@ func (l Lexer) Tokenize(r io.Reader, out chan<- Token) error {
 				t.State = stateName
 				if err := pusher(t); err != nil {
 					out <- Token{}
+					log.Println("STOP4", err)
 					return err
 				}
 			}
@@ -103,10 +110,16 @@ func (l Lexer) Tokenize(r io.Reader, out chan<- Token) error {
 				}
 			}
 
+			if stack.Len() == 0 {
+				out <- Token{}
+				return nil
+			}
+
 			// Consume matched part
 			subject = subject[n:]
 		}
 	}
+	log.Println("STOP6")
 
 	return nil
 }

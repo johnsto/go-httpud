@@ -65,11 +65,11 @@ func NewRegexpRule(re string, t TokenType, subTypes []TokenType,
 
 // Find returns the first position in subject where this Rule will
 // match, or -1 if no match was found.
-func (m RegexpRule) Find(subject string) (int, Rule) {
-	if indices := m.Regexp.FindStringIndex(subject); indices == nil {
+func (r RegexpRule) Find(subject string) (int, Rule) {
+	if indices := r.Regexp.FindStringIndex(subject); indices == nil {
 		return -1, nil
 	} else {
-		return indices[0], m
+		return indices[0], r
 	}
 }
 

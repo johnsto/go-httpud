@@ -123,6 +123,9 @@ func (f *FormatterJSON) Filter(lexer Lexer, in <-chan Token,
 			default:
 				out <- token
 			}
+		case "":
+			// EOF
+			break
 		default:
 			out <- token
 		}
@@ -132,5 +135,5 @@ func (f *FormatterJSON) Filter(lexer Lexer, in <-chan Token,
 	return nil
 }
 func init() {
-	Register(LexerJSON)
+	Register(LexerJSON.Name, LexerJSON)
 }

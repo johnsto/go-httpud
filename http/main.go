@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"os"
 
+	"bitbucket.org/johnsto/go-httpud/highlight/output/term"
+
 	"github.com/spf13/pflag"
 )
 
@@ -54,14 +56,15 @@ func main() {
 
 	defer resp.Body.Close()
 
+	output := term.NewOutput()
+
 	if cmd.HeadersOnly || !cmd.BodyOnly {
-		PrintStatusLine(resp)
-		PrintHeaders(resp.Header)
+		PrintHeaders(output, resp)
 	}
 	if !cmd.HeadersOnly && !cmd.BodyOnly {
 		fmt.Println()
 	}
 	if !cmd.HeadersOnly || cmd.BodyOnly {
-		PrintBody(resp)
+		PrintBody(output, resp)
 	}
 }

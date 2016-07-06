@@ -30,3 +30,7 @@ func (s *Stack) Pop() string {
 func (s *Stack) Empty() {
 	*s = []string{}
 }
+
+func (s *Stack) Len() int {
+	return len(*s)
+}

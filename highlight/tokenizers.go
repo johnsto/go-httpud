@@ -1,9 +1,16 @@
 package highlight
 
-var tokenizers []Tokenizer
+var tokenizers map[string]Tokenizer
 
-func Register(t Tokenizer) {
-	tokenizers = append(tokenizers, t)
+func Register(name string, t Tokenizer) {
+	if tokenizers == nil {
+		tokenizers = map[string]Tokenizer{}
+	}
+	tokenizers[name] = t
+}
+
+func GetTokenizer(name string) Tokenizer {
+	return tokenizers[name]
 }
 
 // GetTokenizerForContentType returns a Tokenizer for the given content type

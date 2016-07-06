@@ -30,17 +30,17 @@ type Filters []Filter
 // It is the caller's responsibility to close the output channel when done.
 func (fs Filters) PushFunc(lexer Lexer, out chan<- Token) func(token Token) error {
 	in := make(chan Token)
-	done := make(chan error)
+	errChan := make(chan error)
 
 	go func() {
-		done <- fs.Filter(lexer, in, out)
+		errChan <- fs.Filter(lexer, in, out)
 		close(in)
 	}()
 
 	return func(token Token) error {
 		select {
 		case in <- token:
-		case err := <-done:
+		case err := <-errChan:
 			return err
 		}
 		return nil

@@ -1,7 +1,7 @@
 package highlight
 
 var LexerHTML = Lexer{
-	Name:      "HTML",
+	Name:      "html",
 	MimeTypes: []string{"text/html", "application/xhtml+xml"},
 	Filenames: []string{"*.html", "*.htm", "*.xhtml"},
 	States: StatesSpec{
@@ -41,5 +41,5 @@ var LexerHTML = Lexer{
 }
 
 func init() {
-	Register(LexerHTML)
+	Register(LexerHTML.Name, LexerHTML)
 }
