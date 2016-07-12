@@ -58,13 +58,12 @@ func main() {
 
 	output := term.NewOutput()
 
-	if cmd.HeadersOnly || !cmd.BodyOnly {
-		PrintHeaders(output, resp)
-	}
-	if !cmd.HeadersOnly && !cmd.BodyOnly {
-		fmt.Println()
-	}
-	if !cmd.HeadersOnly || cmd.BodyOnly {
-		PrintBody(output, resp)
+	err = PrintResponse(output, resp, PrintResponseOptions{
+		Headers: cmd.HeadersOnly || !cmd.BodyOnly,
+		Body:    !cmd.HeadersOnly || cmd.BodyOnly,
+	})
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }

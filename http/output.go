@@ -1,19 +1,23 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"bitbucket.org/johnsto/go-httpud/highlight"
 	"bitbucket.org/johnsto/go-httpud/highlight/output/term"
 )
 
-func PrintHeaders(output *term.Output, resp *http.Response) error {
+type PrintResponseOptions struct {
+	Headers bool
+	Body    bool
+}
+
+func PrintResponse(output *term.Output, resp *http.Response,
+	opts PrintResponseOptions) error {
 	httpTokenizer := highlight.GetTokenizer("http")
 
 	contentType := resp.Header.Get("Content-Type")
@@ -35,47 +39,34 @@ func PrintHeaders(output *term.Output, resp *http.Response) error {
 
 	// Tokenize headers
 	err = httpTokenizer.Tokenize(r, func(t highlight.Token) error {
-		_, err := output.Emit(t)
-		return err
+		if opts.Headers {
+			_, err := output.Emit(t)
+			return err
+		}
+		return nil
 	})
 	if err != nil && err != io.EOF {
-		log.Fatalln(err)
+		return err
 	}
 
 	// Tokenize body
-	err = bodyTokenizer.Tokenize(r, func(t highlight.Token) error {
-		_, err := output.Emit(t)
-		return err
-	})
-	if err != nil && err != io.EOF {
-		log.Fatalln(err)
+	if bodyTokenizer == nil {
+		// No tokenizer; emit straight to output
+		if _, err := io.Copy(os.Stdout, r); err != nil {
+			return fmt.Errorf("\nCouldn't write to stdout: %s", err)
+		}
+	} else {
+		err = bodyTokenizer.Tokenize(r, func(t highlight.Token) error {
+			if opts.Body {
+				_, err := output.Emit(t)
+				return err
+			}
+			return nil
+		})
+		if err != nil && err != io.EOF {
+			return fmt.Errorf("couldn't tokenise to stdout: %s", err)
+		}
 	}
 
 	return nil
-}
-
-func PrintBody(output *term.Output, resp *http.Response) {
-	contentType := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
-
-	var err error
-
-	tokenizer, err := highlight.GetTokenizerForContentType(contentType)
-	if err != nil {
-		fmt.Printf("error getting tokenizer: %s", err)
-	}
-
-	if tokenizer == nil {
-		// Echo response body to stdout verbatim
-		w := bufio.NewWriter(os.Stdout)
-		w.ReadFrom(resp.Body)
-		return
-	}
-
-	err = tokenizer.Tokenize(resp.Body, func(t highlight.Token) error {
-		_, err := output.Emit(t)
-		return err
-	})
-	if err != nil && err != io.EOF {
-		log.Fatalln(err)
-	}
 }
