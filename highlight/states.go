@@ -1,16 +1,21 @@
 package highlight
 
+// States contains lexer states
 type States interface {
 	Get(name string) State
 	Compile() (States, error)
 }
 
+// StatesSpec is a container for Lexer rule specifications, and can be
+// compiled into a full state machine.
 type StatesSpec map[string][]RuleSpec
 
 func (m StatesSpec) Get(name string) State {
 	return nil
 }
 
+// Compile compiles the specified states into a complete State machine,
+// returning an error if any state fails to compile for any reason.
 func (m StatesSpec) Compile() (States, error) {
 	sm := &StateMap{}
 	for name, specs := range m {
@@ -23,6 +28,8 @@ func (m StatesSpec) Compile() (States, error) {
 	return sm, nil
 }
 
+// MustCompile is a helper method that compiles the State specification,
+// panicing on error.
 func (m StatesSpec) MustCompile() States {
 	states, err := m.Compile()
 	if err != nil {
@@ -31,12 +38,15 @@ func (m StatesSpec) MustCompile() States {
 	return states
 }
 
+// StateMap is a map of states to their names.
 type StateMap map[string]State
 
+// Get returns the State with the given name.
 func (m StateMap) Get(name string) State {
 	return m[name]
 }
 
+// Compile does nothing.
 func (m StateMap) Compile() (States, error) {
 	return nil, nil
 }
@@ -44,6 +54,20 @@ func (m StateMap) Compile() (States, error) {
 // State is a list of matching Rules.
 type State []Rule
 
+// Find examines the provided string, looking for a match within the current
+// state. It returns the position `n` at which a rule match was found, and the
+// rule itself.
+//
+// -1 will be returned if no rule could be matched, in which case
+// the caller should disregard the string entirely (emit it as an error),
+// and continue onto the next line of input.
+//
+// 0 will be returned if a rule matches at the start of the string.
+//
+// Otherwise, this function will return a number of characters to skip before
+// reaching the first matched rule. The caller should emit those first `n`
+// characters as an error, and emit the remaining characters according to the
+// rule.
 func (s State) Find(subject string) (int, Rule) {
 	var earliestPos int = len(subject)
 	var earliestRule Rule

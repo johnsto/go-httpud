@@ -2,6 +2,8 @@ package highlight
 
 var tokenizers map[string]Tokenizer
 
+// Register registers the given Tokenizer under the specified name. Any
+// existing Tokenizer under that name will be replaced.
 func Register(name string, t Tokenizer) {
 	if tokenizers == nil {
 		tokenizers = map[string]Tokenizer{}
@@ -9,6 +11,7 @@ func Register(name string, t Tokenizer) {
 	tokenizers[name] = t
 }
 
+// GetTokenizer returns the Tokenizer of the given name.
 func GetTokenizer(name string) Tokenizer {
 	return tokenizers[name]
 }
