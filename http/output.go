@@ -53,7 +53,7 @@ func PrintResponse(output *term.Output, resp *http.Response,
 	if bodyTokenizer == nil {
 		// No tokenizer; emit straight to output
 		if _, err := io.Copy(os.Stdout, r); err != nil {
-			return fmt.Errorf("\nCouldn't write to stdout: %s", err)
+			return fmt.Errorf("couldn't write to stdout: %s", err)
 		}
 	} else {
 		err = bodyTokenizer.Tokenize(r, func(t highlight.Token) error {
