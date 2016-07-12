@@ -1,6 +1,8 @@
-package highlight
+package lexers
 
-var LexerCSS = Lexer{
+import . "bitbucket.org/johnsto/go-httpud/highlight"
+
+var CSS = Lexer{
 	Name:      "CSS",
 	MimeTypes: []string{"text/css"},
 	Filenames: []string{"*.css"},
@@ -55,5 +57,5 @@ var LexerCSS = Lexer{
 }
 
 func init() {
-	Register(LexerCSS.Name, LexerCSS)
+	Register(CSS.Name, CSS)
 }

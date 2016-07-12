@@ -1,4 +1,4 @@
-package highlight_test
+package lexers_test
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	. "bitbucket.org/johnsto/go-httpud/highlight"
+	"bitbucket.org/johnsto/go-httpud/highlight/lexers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +16,7 @@ func TestLexerJSONSimple(t *testing.T) {
 		Type  TokenType
 	}
 
-	states, err := LexerJSON.States.Compile()
+	states, err := lexers.JSON.States.Compile()
 	assert.Nil(t, err, "JSON lexer should compile")
 
 	for _, item := range []struct {
@@ -72,7 +73,7 @@ func TestLexerJSONComplex(t *testing.T) {
 		Type  TokenType
 	}
 
-	_, err := LexerJSON.States.Compile()
+	_, err := lexers.JSON.States.Compile()
 	assert.Nil(t, err, "JSON lexer should compile")
 	for _, item := range []struct {
 		State   string
@@ -223,7 +224,7 @@ func TestLexerJSONComplex(t *testing.T) {
 			{"}", Punctuation},
 		}},
 	} {
-		tokens, err := LexerJSON.TokenizeString(item.Subject)
+		tokens, err := lexers.JSON.TokenizeString(item.Subject)
 		tokens = tokens[0 : len(tokens)-1] // remove EndToken
 		name := fmt.Sprintf("`%s` %v %v", item.Subject, tokens, err)
 		assert.Equal(t, io.EOF, err,

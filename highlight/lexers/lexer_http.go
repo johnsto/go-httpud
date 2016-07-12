@@ -1,8 +1,8 @@
-package highlight
+package lexers
 
-import ()
+import . "bitbucket.org/johnsto/go-httpud/highlight"
 
-var LexerHTTP = Lexer{
+var HTTP = Lexer{
 	Name: "http",
 	States: StatesSpec{
 		"root": {
@@ -28,5 +28,5 @@ var LexerHTTP = Lexer{
 }
 
 func init() {
-	Register(LexerHTTP.Name, LexerHTTP)
+	Register(HTTP.Name, HTTP)
 }

@@ -1,10 +1,11 @@
-package highlight
+package lexers
 
 import (
+	. "bitbucket.org/johnsto/go-httpud/highlight"
 	"strings"
 )
 
-var LexerJSON = Lexer{
+var JSON = Lexer{
 	Name:      "JSON",
 	MimeTypes: []string{"application/json"},
 	Filenames: []string{"*.json"},
@@ -69,15 +70,15 @@ var LexerJSON = Lexer{
 	},
 	Filters: []Filter{
 		RemoveEmptiesFilter,
-		&FormatterJSON{Indent: "  "},
+		&JSONFormatter{Indent: "  "},
 	},
 }
 
-type FormatterJSON struct {
+type JSONFormatter struct {
 	Indent string
 }
 
-func (f *FormatterJSON) Filter(lexer Lexer, emit func(Token) error) func(Token) error {
+func (f *JSONFormatter) Filter(lexer Lexer, emit func(Token) error) func(Token) error {
 
 	//var laastState string
 	indents := 0
@@ -141,5 +142,5 @@ func (f *FormatterJSON) Filter(lexer Lexer, emit func(Token) error) func(Token) 
 	return nil
 }
 func init() {
-	Register(LexerJSON.Name, LexerJSON)
+	Register(JSON.Name, JSON)
 }

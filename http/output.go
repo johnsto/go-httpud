@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"bitbucket.org/johnsto/go-httpud/highlight"
+	_ "bitbucket.org/johnsto/go-httpud/highlight/lexers"
 	"bitbucket.org/johnsto/go-httpud/highlight/output/term"
 )
 

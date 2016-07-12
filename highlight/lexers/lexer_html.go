@@ -1,6 +1,8 @@
-package highlight
+package lexers
 
-var LexerHTML = Lexer{
+import . "bitbucket.org/johnsto/go-httpud/highlight"
+
+var HTML = Lexer{
 	Name:      "html",
 	MimeTypes: []string{"text/html", "application/xhtml+xml"},
 	Filenames: []string{"*.html", "*.htm", "*.xhtml"},
@@ -41,5 +43,5 @@ var LexerHTML = Lexer{
 }
 
 func init() {
-	Register(LexerHTML.Name, LexerHTML)
+	Register(HTML.Name, HTML)
 }
