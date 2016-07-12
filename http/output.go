@@ -17,23 +17,12 @@ func PrintHeaders(output *term.Output, resp *http.Response) error {
 	httpTokenizer := highlight.GetTokenizer("http")
 
 	contentType := resp.Header.Get("Content-Type")
-	htmlTokenizer, err := highlight.GetTokenizerForContentType(contentType)
+	bodyTokenizer, err := highlight.GetTokenizerForContentType(contentType)
 	if err != nil {
 		return err
 	}
 
 	r, w := io.Pipe()
-
-	tokens := make(chan highlight.Token)
-	done := make(chan bool)
-
-	// Output emitter
-	go func() {
-		for token := range tokens {
-			output.Emit(token)
-		}
-		done <- true
-	}()
 
 	// Write Response to pipe
 	go func() {
@@ -42,27 +31,25 @@ func PrintHeaders(output *term.Output, resp *http.Response) error {
 			log.Fatalln(err)
 		}
 		w.Close()
-		done <- true
 	}()
 
 	// Tokenize headers
-	err = httpTokenizer.Tokenize(r, tokens)
+	err = httpTokenizer.Tokenize(r, func(t highlight.Token) error {
+		_, err := output.Emit(t)
+		return err
+	})
 	if err != nil && err != io.EOF {
 		log.Fatalln(err)
 	}
 
 	// Tokenize body
-	err = htmlTokenizer.Tokenize(r, tokens)
+	err = bodyTokenizer.Tokenize(r, func(t highlight.Token) error {
+		_, err := output.Emit(t)
+		return err
+	})
 	if err != nil && err != io.EOF {
 		log.Fatalln(err)
 	}
-
-	log.Println("THNG")
-	close(tokens)
-
-	// Wait for completion
-	<-done
-	<-done
 
 	return nil
 }
@@ -84,18 +71,11 @@ func PrintBody(output *term.Output, resp *http.Response) {
 		return
 	}
 
-	tokens := make(chan highlight.Token)
-	done := make(chan bool)
-	go func() {
-		for token := range tokens {
-			output.Emit(token)
-		}
-		done <- true
-	}()
-	err = tokenizer.Tokenize(resp.Body, tokens)
+	err = tokenizer.Tokenize(resp.Body, func(t highlight.Token) error {
+		_, err := output.Emit(t)
+		return err
+	})
 	if err != nil && err != io.EOF {
 		log.Fatalln(err)
 	}
-	close(tokens)
-	<-done
 }

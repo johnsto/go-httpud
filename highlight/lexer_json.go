@@ -77,60 +77,66 @@ type FormatterJSON struct {
 	Indent string
 }
 
-func (f *FormatterJSON) Filter(lexer Lexer, in <-chan Token,
-	out chan<- Token) error {
-	//var lastState string
+func (f *FormatterJSON) Filter(lexer Lexer, emit func(Token) error) func(Token) error {
+
+	//var laastState string
 	indents := 0
-	for token := range in {
+	return func(token Token) error {
 		indent := strings.Repeat(f.Indent, indents)
+
+		var out []Token
 
 		switch token.Type {
 		case Whitespace:
 			// we'll add our own whitespace, thanks!
-			continue
+			return nil
 		case Assignment:
 			switch token.Value {
 			case ":":
-				out <- token
-				out <- Token{Type: Whitespace, Value: " "}
+				out = []Token{token, Token{Type: Whitespace, Value: " "}}
 			default:
-				out <- token
+				out = []Token{token}
 			}
 		case Punctuation:
 			switch token.Value {
 			case ",":
-				out <- token
-				out <- Token{Type: Whitespace, Value: "\n"}
-				out <- Token{Type: Whitespace, Value: indent}
+				out = []Token{token,
+					Token{Type: Whitespace, Value: "\n"},
+					Token{Type: Whitespace, Value: indent}}
 			case "{":
 				fallthrough
 			case "[":
-				out <- token
-				out <- Token{Type: Whitespace, Value: "\n"}
+				out = append(out, token)
+				out = append(out, Token{Type: Whitespace, Value: "\n"})
 				indents++
 				indent = strings.Repeat(f.Indent, indents)
-				out <- Token{Type: Whitespace, Value: indent}
+				out = append(out, Token{Type: Whitespace, Value: indent})
 			case "}":
 				fallthrough
 			case "]":
-				out <- Token{Type: Whitespace, Value: "\n"}
+				out = append(out, Token{Type: Whitespace, Value: "\n"})
 				indents--
 				indent = strings.Repeat(f.Indent, indents)
-				out <- Token{Type: Whitespace, Value: indent}
-				out <- token
+				out = append(out, Token{Type: Whitespace, Value: indent})
+				out = append(out, token)
 			case "\"":
-				out <- token
+				out = []Token{token}
 			default:
-				out <- token
+				out = []Token{token}
 			}
 		case "":
 			// EOF
 			break
 		default:
-			out <- token
+			out = []Token{token}
 		}
 
-		//lastState = token.State
+		for _, t := range out {
+			if err := emit(t); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 	return nil
 }

@@ -31,9 +31,10 @@ func TestFilters(t *testing.T) {
 		},
 	}, {
 		Name: "error",
-		Filters: Filters{FilterFunc(func(l Lexer, in <-chan Token,
-			out chan<- Token) error {
-			return io.EOF
+		Filters: Filters{FilterFunc(func(l Lexer, out func(Token) error) func(Token) error {
+			return func(t Token) error {
+				return io.EOF
+			}
 		})},
 		Input: []Token{
 			{Value: "a", Type: Text},
@@ -82,44 +83,21 @@ func TestFilters(t *testing.T) {
 
 func testFilters(t *testing.T, filters Filters, input, expected []Token,
 	name string) error {
-	var lexer Lexer
-	in, out := make(chan Token), make(chan Token)
-	finished := make(chan chan Token)
-	done := make(chan bool, 1)
-	errChan := make(chan error, 1)
 
-	// Producer emits tokens into `in` channel
-	go func() {
-		for _, token := range input {
-			select {
-			case in <- token:
-			case <-done:
-			}
+	pos := 0
+
+	filter := filters.Filter(Lexer{}, func(token Token) error {
+		assert.Equal(t, expected[pos], token, name)
+		pos++
+		return nil
+	})
+
+	for _, inToken := range input {
+		err := filter(inToken)
+		if err != nil {
+			return err
 		}
-		close(in)
-		finished <- in
-	}()
+	}
 
-	// Filter tokens
-	go func() {
-		err := filters.Filter(lexer, in, out)
-		errChan <- err
-		done <- true
-		close(out)
-		finished <- out
-	}()
-
-	// Consumer reads tokens and compares against input
-	go func() {
-		i := 0
-		for token := range out {
-			assert.Equal(t, expected[i], token, name)
-			i++
-		}
-		assert.Equal(t, len(expected), i, name)
-	}()
-
-	<-finished
-	<-finished
-	return <-errChan
+	return nil
 }

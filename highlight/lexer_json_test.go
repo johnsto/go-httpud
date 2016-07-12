@@ -224,11 +224,16 @@ func TestLexerJSONComplex(t *testing.T) {
 		}},
 	} {
 		tokens, err := LexerJSON.TokenizeString(item.Subject)
+		tokens = tokens[0 : len(tokens)-1] // remove EndToken
 		name := fmt.Sprintf("`%s` %v %v", item.Subject, tokens, err)
 		assert.Equal(t, io.EOF, err,
 			fmt.Sprintf("tokeniser should return EOF"))
-		assert.Equal(t, len(item.Tokens), len(tokens),
-			fmt.Sprintf("number of tokens in %#v should match", item.Subject))
+		if !assert.Equal(t, len(item.Tokens), len(tokens),
+			fmt.Sprintf("number of tokens in %#v should match", item.Subject)) {
+			fmt.Println(tokens)
+			fmt.Println(item.Tokens)
+			fmt.Println()
+		}
 		for i, token := range tokens {
 			if i >= len(item.Tokens) {
 				break

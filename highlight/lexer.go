@@ -22,15 +22,13 @@ type Lexer struct {
 // Tokenize reads from the given input and emits tokens to the output channel.
 // Will end on any error from the reader, including io.EOF to signify the end
 // of input.
-func (l Lexer) Tokenize(r io.Reader, out chan<- Token) error {
+func (l Lexer) Tokenize(r io.Reader, emit func(Token) error) error {
 	states, err := l.States.Compile()
 	if err != nil {
 		return err
 	}
 
 	br := bufio.NewReaderSize(r, 128)
-
-	pusher := l.Filters.PushFunc(l, out)
 
 	stack := &Stack{"root"}
 	eol := false
@@ -44,9 +42,7 @@ func (l Lexer) Tokenize(r io.Reader, out chan<- Token) error {
 			eol = true
 		} else if err != nil {
 			// something bad happened....
-			out <- Token{}
-			log.Println("STOP1", err)
-			return err
+			return emit(EndToken)
 		} else {
 			eol = strings.HasSuffix(subject, "\n")
 		}
@@ -54,8 +50,8 @@ func (l Lexer) Tokenize(r io.Reader, out chan<- Token) error {
 		subject = subject + next
 
 		if subject == "" && err == io.EOF {
-			log.Println("STOP2", err)
-			return pusher(Token{})
+			emit(EndToken)
+			return err
 		}
 
 		for subject != "" {
@@ -67,9 +63,7 @@ func (l Lexer) Tokenize(r io.Reader, out chan<- Token) error {
 			n, rule, tokens, err := state.Match(subject)
 			//fmt.Println(subject, n, rule, tokens)
 			if err != nil {
-				out <- Token{}
-				log.Println("STOP3", err)
-				return err
+				return emit(EndToken)
 			}
 
 			// No rules matched
@@ -87,9 +81,9 @@ func (l Lexer) Tokenize(r io.Reader, out chan<- Token) error {
 			// Emit each token to the output
 			for _, t := range tokens {
 				t.State = stateName
-				if err := pusher(t); err != nil {
-					out <- Token{}
+				if err := emit(t); err != nil {
 					log.Println("STOP4", err)
+					emit(EndToken)
 					return err
 				}
 			}
@@ -111,15 +105,13 @@ func (l Lexer) Tokenize(r io.Reader, out chan<- Token) error {
 			}
 
 			if stack.Len() == 0 {
-				out <- Token{}
-				return nil
+				return emit(EndToken)
 			}
 
 			// Consume matched part
 			subject = subject[n:]
 		}
 	}
-	log.Println("STOP6")
 
 	return nil
 }
@@ -128,17 +120,10 @@ func (l Lexer) Tokenize(r io.Reader, out chan<- Token) error {
 func (l Lexer) TokenizeString(s string) ([]Token, error) {
 	r := strings.NewReader(s)
 	tokens := []Token{}
-	ch := make(chan Token, 0)
-	sem := make(chan bool)
-	go func() {
-		for token := range ch {
-			tokens = append(tokens, token)
-		}
-		sem <- true
-	}()
-	err := l.Tokenize(r, ch)
-	close(ch)
-	<-sem
+	err := l.Tokenize(r, func(t Token) error {
+		tokens = append(tokens, t)
+		return nil
+	})
 	return tokens, err
 }
 

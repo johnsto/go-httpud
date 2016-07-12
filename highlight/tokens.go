@@ -16,3 +16,5 @@ const (
 	Entity                = "entity"
 	Whitespace            = "whitespace"
 )
+
+var EndToken = Token{}
