@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"mime"
 	"path"
 	"strings"
@@ -44,7 +43,7 @@ func (l Lexer) Tokenize(r io.Reader, emit func(Token) error) error {
 			// something bad happened....
 			return emit(EndToken)
 		} else {
-			eol = strings.HasSuffix(subject, "\n")
+			eol = strings.HasSuffix(next, "\n")
 		}
 
 		subject = subject + next
@@ -61,7 +60,6 @@ func (l Lexer) Tokenize(r io.Reader, emit func(Token) error) error {
 
 			// Tokenize input
 			n, rule, tokens, err := state.Match(subject)
-			//fmt.Println(subject, n, rule, tokens)
 			if err != nil {
 				return emit(EndToken)
 			}
@@ -72,7 +70,7 @@ func (l Lexer) Tokenize(r io.Reader, emit func(Token) error) error {
 					// Read more data for the current line
 					break
 				} else {
-					// Emit entire subject asn an error
+					// Emit entire subject as an error
 					tokens = []Token{{Value: subject, Type: Error}}
 					n = len(subject)
 				}
@@ -82,7 +80,6 @@ func (l Lexer) Tokenize(r io.Reader, emit func(Token) error) error {
 			for _, t := range tokens {
 				t.State = stateName
 				if err := emit(t); err != nil {
-					log.Println("STOP4", err)
 					emit(EndToken)
 					return err
 				}
@@ -90,9 +87,11 @@ func (l Lexer) Tokenize(r io.Reader, emit func(Token) error) error {
 
 			// Update state
 			if rule == nil {
-				// Didn't match at all, reset to root state
-				stack.Empty()
-				stack.Push("root")
+				if !eol {
+					// Didn't match at all, reset to root state
+					stack.Empty()
+					stack.Push("root")
+				}
 			} else {
 				// Push new states as appropriate
 				for _, state := range rule.Stack() {

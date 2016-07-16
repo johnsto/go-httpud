@@ -79,14 +79,15 @@ var CSS = Lexer{
 			{Regexp: `[ \r\n\f\t]+`, Type: Whitespace},
 		},
 		"singleLineComment": {
-			{Regexp: `\/\/.*$`, Type: Comment},
+			{Regexp: `\/\/.*`, Type: Comment},
 		},
 		"multiLineComment": {
 			{Regexp: `\/\*`, Type: Comment, State: "multiLineCommentContents"},
 		},
 		"multiLineCommentContents": {
 			{Regexp: `\*\/`, Type: Comment, State: "#pop"},
-			{Regexp: `.*`, Type: Comment},
+			{Regexp: `(.+?)(\*\/)`, Type: Comment, State: "#pop"},
+			{Regexp: `.+`, Type: Comment},
 		},
 	},
 }
