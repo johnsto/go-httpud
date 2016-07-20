@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"os"
 
-	"bitbucket.org/johnsto/go-httpud/highlight"
-	_ "bitbucket.org/johnsto/go-httpud/highlight/lexers"
-	"bitbucket.org/johnsto/go-httpud/highlight/output/term"
+	"bitbucket.org/johnsto/go-highlight"
+	_ "bitbucket.org/johnsto/go-highlight/lexers"
+	"bitbucket.org/johnsto/go-highlight/output/term"
 )
 
 type PrintResponseOptions struct {
@@ -41,7 +41,7 @@ func PrintResponse(output *term.Output, resp *http.Response,
 	// Tokenize headers
 	err = httpTokenizer.Tokenize(r, func(t highlight.Token) error {
 		if opts.Headers {
-			_, err := output.Emit(t)
+			err := output.Emit(t)
 			return err
 		}
 		return nil
@@ -59,7 +59,7 @@ func PrintResponse(output *term.Output, resp *http.Response,
 	} else {
 		err = bodyTokenizer.Tokenize(r, func(t highlight.Token) error {
 			if opts.Body {
-				_, err := output.Emit(t)
+				err := output.Emit(t)
 				return err
 			}
 			return nil

@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"os"
 
-	"bitbucket.org/johnsto/go-httpud/highlight/output/term"
+	"bitbucket.org/johnsto/go-highlight/output/term"
 
 	"github.com/spf13/pflag"
 )
