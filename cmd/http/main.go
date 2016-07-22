@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"os"
 
-	"bitbucket.org/johnsto/go-highlight/output/term"
+	"github.com/johnsto/go-highlight/output/term"
 
 	"github.com/spf13/pflag"
 )
@@ -35,6 +35,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	req.Header.Set("User-Agent", "httpud")
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return ErrIgnoringRedirect

@@ -38,21 +38,27 @@ var (
 )
 
 type Command struct {
-	Method  string
-	URL     *url.URL
-	Headers http.Header
-	Query   url.Values
-	Data    map[string]interface{}
+	// Request data
+	Method    string
+	URL       *url.URL
+	Headers   http.Header
+	Query     url.Values
+	Data      map[string]interface{}
+	BasicAuth string
 
-	HeadersOnly     bool
-	BodyOnly        bool
-	FollowRedirects bool
-
+	// Request handling
 	ParamsAsJSON bool
 	ParamsAsForm bool
 
-	BasicAuth string
+	// Response handling
+	FollowRedirects bool
 
+	// Output options
+	HeadersOnly bool
+	BodyOnly    bool
+	Pretty      string
+
+	// Command line flags
 	flags *pflag.FlagSet
 }
 
@@ -72,6 +78,8 @@ func NewCommand() *Command {
 
 	fs.BoolVar(&c.HeadersOnly, "headers", false, "only emit response headers")
 	fs.BoolVar(&c.BodyOnly, "body", false, "only emit response body")
+	fs.StringVar(&c.Pretty, "pretty", "all",
+		"output style <all|color|format|none>")
 
 	fs.StringVar(&c.BasicAuth, "auth", "", "HTTP basic auth (user[:pass])")
 	fs.BoolVar(&c.FollowRedirects, "follow", false, "follow HTTP redirects")
