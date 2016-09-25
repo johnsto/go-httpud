@@ -2,7 +2,9 @@
 
 ## Description
 
-A shameless Go clone of the superb [httpie](https://github.com/jkbrzt/httpie) by Jakub Roztočil. Intended for cases where a Python/pip installation of httpie isn't possible.
+HTTPud is a shameless Go clone of the superb [HTTPie](https://github.com/jkbrzt/httpie)
+by Jakub Roztočil, but with only a fraction of the features. Intended for 
+cases where a Python/pip installation of HTTPie isn't possible.
 
 ## Installation
 
