@@ -27,15 +27,19 @@ const (
 )
 
 var (
-	headerRegexp = regexp.MustCompile(
-		"^" + TokenString + ":" + QuotedString + "$")
-	dataRegexp = regexp.MustCompile(
-		"^" + QuotedString + "=" + QuotedString + "$")
-	jsonRegexp = regexp.MustCompile(
-		"^" + TokenString + ":=" + JsonString + "$")
-	queryRegexp = regexp.MustCompile(
-		"^" + QuotedString + "==" + QuotedString + "$")
+	headerRegexp = regexp.MustCompile("^" + TokenString + ":" + QuotedString + "$")
+	dataRegexp   = regexp.MustCompile("^" + QuotedString + "=" + QuotedString + "$")
+	jsonRegexp   = regexp.MustCompile("^" + TokenString + ":=" + JsonString + "$")
+	queryRegexp  = regexp.MustCompile("^" + QuotedString + "==" + QuotedString + "$")
 )
+
+type UnsupportedContentTypeError struct {
+	ContentType string
+}
+
+func (e UnsupportedContentTypeError) Error() string {
+	return "unsupported content type: " + e.ContentType
+}
 
 type Command struct {
 	// Request data
@@ -71,15 +75,12 @@ func NewCommand() *Command {
 
 	fs := c.flags
 
-	fs.BoolVar(&c.ParamsAsJSON, "json", false,
-		"send parameters as JSON document")
-	fs.BoolVar(&c.ParamsAsForm, "form", false,
-		"send parameters as URL-encoded form")
+	fs.BoolVar(&c.ParamsAsJSON, "json", false, "send parameters as JSON document")
+	fs.BoolVar(&c.ParamsAsForm, "form", false, "send parameters as URL-encoded form")
 
 	fs.BoolVar(&c.HeadersOnly, "headers", false, "only emit response headers")
 	fs.BoolVar(&c.BodyOnly, "body", false, "only emit response body")
-	fs.StringVar(&c.Pretty, "pretty", "all",
-		"output style <all|color|format|none>")
+	fs.StringVar(&c.Pretty, "pretty", "all", "output style <all|color|format|none>")
 
 	fs.StringVar(&c.BasicAuth, "auth", "", "HTTP basic auth (user[:pass])")
 	fs.BoolVar(&c.FollowRedirects, "follow", false, "follow HTTP redirects")
@@ -197,6 +198,8 @@ func (c *Command) Usage() {
 	c.flags.PrintDefaults()
 }
 
+// Request returns an `http.Request` representing the arguments entered by the
+// user.
 func (c *Command) Request() (*http.Request, error) {
 	if c.URL.Scheme == "" {
 		c.URL.Scheme = "http"
@@ -232,6 +235,7 @@ func (c *Command) Request() (*http.Request, error) {
 		req.SetBasicAuth(parts[1], parts[2])
 	}
 
+	// Set headers
 	req.Header.Set("Host", c.URL.Host)
 	for k := range c.Headers {
 		req.Header.Set(k, c.Headers.Get(k))
@@ -240,6 +244,9 @@ func (c *Command) Request() (*http.Request, error) {
 	return req, nil
 }
 
+// MakeBody converts the provided data to the specified type, returning a
+// Reader emitting the content. If the specified content type is not
+// supported, an UnsupportedContentTypeError will be returned.
 func MakeBody(contentType string, data map[string]interface{}) (
 	io.Reader, error) {
 	switch contentType {
@@ -248,10 +255,11 @@ func MakeBody(contentType string, data map[string]interface{}) (
 	case "application/x-www-form-urlencoded":
 		return MakeFormBody(data)
 	default:
-		return nil, fmt.Errorf("unsupported content type: %s", contentType)
+		return nil, UnsupportedContentTypeError{contentType}
 	}
 }
 
+// MakeJSONBody converts the provided key/values to JSON data.
 func MakeJSONBody(data map[string]interface{}) (io.Reader, error) {
 	b, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
@@ -260,6 +268,7 @@ func MakeJSONBody(data map[string]interface{}) (io.Reader, error) {
 	return bytes.NewReader(b), nil
 }
 
+// MakeFormBody converts the provided key/values to HTTP form data.
 func MakeFormBody(data map[string]interface{}) (io.Reader, error) {
 	form := url.Values{}
 	for k, v := range data {
@@ -268,27 +277,18 @@ func MakeFormBody(data map[string]interface{}) (io.Reader, error) {
 	return strings.NewReader(form.Encode()), nil
 }
 
+// IsMethodString returns true if `s` is a valid and supported HTTP method.
 func IsMethodString(s string) bool {
-	switch strings.ToUpper(s) {
-	case "GET":
-		fallthrough
-	case "HEAD":
-		fallthrough
-	case "POST":
-		fallthrough
-	case "PUT":
-		fallthrough
-	case "PATCH":
-		fallthrough
-	case "DELETE":
-		fallthrough
-	case "CONNECT":
-		fallthrough
-	case "OPTIONS":
-		fallthrough
-	case "TRACE":
-		return true
-	default:
-		return false
-	}
+	_, ok := map[string]bool{
+		"get":     true,
+		"head":    true,
+		"post":    true,
+		"put":     true,
+		"patch":   true,
+		"delete":  true,
+		"connect": true,
+		"options": true,
+		"trace":   true,
+	}[strings.ToLower(s)]
+	return ok
 }
