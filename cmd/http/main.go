@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -22,24 +25,52 @@ func main() {
 	err := cmd.ParseArgs(os.Args[1:])
 
 	if err == pflag.ErrHelp {
+		// Print usage and exit
 		cmd.Usage()
+		return
+	} else if err != nil {
+		// Parsing args failed
+		log.Fatalln(err)
 		return
 	}
 
-	if err != nil {
-		log.Fatalln(err)
-	}
+	output := term.NewOutput()
 
-	req, err := cmd.Request()
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	req.Header.Set("User-Agent", "httpud")
+	// Create client
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return ErrIgnoringRedirect
 		},
+	}
+
+	// Create request
+	req, err := cmd.Request()
+	if err != nil {
+		log.Fatalln(err)
+		return
+	}
+	req.Header.Set("User-Agent", "httpud")
+
+	// Emit request in verbose mode
+	if cmd.Verbose {
+		// Write request body to a temporary buffer
+		buf := &bytes.Buffer{}
+		req.Body = ioutil.NopCloser(io.TeeReader(req.Body, buf))
+
+		// Emit to output
+		err = PrintEntity(output, req, req.Header.Get("Content-Type"),
+			PrintEntityOptions{
+				Headers: cmd.HeadersOnly || !cmd.BodyOnly,
+				Body:    !cmd.HeadersOnly || cmd.BodyOnly,
+			})
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		// Reset request body
+		req.Body = ioutil.NopCloser(buf)
+		fmt.Println("\n\n") // separate request and response with a space
 	}
 
 	resp, err := client.Do(req)
@@ -57,12 +88,12 @@ func main() {
 
 	defer resp.Body.Close()
 
-	output := term.NewOutput()
-
-	err = PrintResponse(output, resp, PrintResponseOptions{
-		Headers: cmd.HeadersOnly || !cmd.BodyOnly,
-		Body:    !cmd.HeadersOnly || cmd.BodyOnly,
-	})
+	// Emit response to output
+	err = PrintEntity(output, resp, resp.Header.Get("Content-Type"),
+		PrintEntityOptions{
+			Headers: cmd.HeadersOnly || !cmd.BodyOnly,
+			Body:    !cmd.HeadersOnly || cmd.BodyOnly,
+		})
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

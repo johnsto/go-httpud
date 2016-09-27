@@ -61,6 +61,7 @@ type Command struct {
 	HeadersOnly bool
 	BodyOnly    bool
 	Pretty      string
+	Verbose     bool
 
 	// Command line flags
 	flags *pflag.FlagSet
@@ -70,7 +71,9 @@ func NewCommand() *Command {
 	c := Command{
 		Method:  "GET",
 		Headers: http.Header{},
-		flags:   pflag.NewFlagSet("http", pflag.ExitOnError),
+		Data:    map[string]interface{}{},
+
+		flags: pflag.NewFlagSet("http", pflag.ExitOnError),
 	}
 
 	fs := c.flags
@@ -83,7 +86,9 @@ func NewCommand() *Command {
 	fs.StringVar(&c.Pretty, "pretty", "all", "output style <all|color|format|none>")
 
 	fs.StringVar(&c.BasicAuth, "auth", "", "HTTP basic auth (user[:pass])")
-	fs.BoolVar(&c.FollowRedirects, "follow", false, "follow HTTP redirects")
+	fs.BoolVarP(&c.FollowRedirects, "follow", "f", false, "follow HTTP redirects")
+
+	fs.BoolVarP(&c.Verbose, "verbose", "v", false, "verbose output")
 
 	return &c
 }
@@ -218,6 +223,7 @@ func (c *Command) Request() (*http.Request, error) {
 	if len(c.Data) > 0 {
 		var err error
 		body, err = MakeBody(contentType, c.Data)
+
 		if err != nil {
 			return nil, err
 		}

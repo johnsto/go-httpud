@@ -1,10 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/johnsto/go-highlight"
@@ -12,40 +12,46 @@ import (
 	"github.com/johnsto/go-highlight/output/term"
 )
 
-type PrintResponseOptions struct {
+type PrintEntityOptions struct {
 	Headers bool
 	Body    bool
 }
 
-func PrintResponse(output *term.Output, resp *http.Response,
-	opts PrintResponseOptions) error {
+type Writable interface {
+	Write(w io.Writer) error
+}
+
+func PrintEntity(output *term.Output, writable Writable, contentType string,
+	opts PrintEntityOptions) error {
 	httpTokenizer := highlight.GetTokenizer("http")
 
-	contentType := resp.Header.Get("Content-Type")
 	bodyTokenizer, err := highlight.GetTokenizerForContentType(contentType)
-	if err != nil {
+	if contentType != "" && err != nil {
 		return err
 	}
 
 	r, w := io.Pipe()
 
-	// Write Response to pipe
+	// Write to pipe
 	go func() {
-		err := resp.Write(w)
+		err := writable.Write(w)
 		if err != nil {
 			log.Fatalln(err)
 		}
 		w.Close()
 	}()
 
+	br := bufio.NewReader(r)
+
 	// Tokenize headers
-	err = httpTokenizer.Tokenize(r, func(t highlight.Token) error {
+	err = httpTokenizer.Tokenize(br, func(t highlight.Token) error {
 		if opts.Headers {
 			err := output.Emit(t)
 			return err
 		}
 		return nil
 	})
+
 	if err != nil && err != io.EOF {
 		return err
 	}
@@ -53,11 +59,11 @@ func PrintResponse(output *term.Output, resp *http.Response,
 	// Tokenize body
 	if bodyTokenizer == nil {
 		// No tokenizer; emit straight to output
-		if _, err := io.Copy(os.Stdout, r); err != nil {
+		if _, err := io.Copy(os.Stdout, br); err != nil {
 			return fmt.Errorf("couldn't write to stdout: %s", err)
 		}
 	} else {
-		err = bodyTokenizer.Tokenize(r, func(t highlight.Token) error {
+		err = bodyTokenizer.Tokenize(br, func(t highlight.Token) error {
 			if opts.Body {
 				err := output.Emit(t)
 				return err
