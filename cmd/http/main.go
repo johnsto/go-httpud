@@ -53,6 +53,8 @@ func main() {
 
 	// Emit request in verbose mode
 	if cmd.Verbose {
+		fmt.Println("[HTTP Request:]")
+
 		// Write request body to a temporary buffer
 		buf := &bytes.Buffer{}
 		req.Body = ioutil.NopCloser(io.TeeReader(req.Body, buf))
@@ -70,7 +72,8 @@ func main() {
 
 		// Reset request body
 		req.Body = ioutil.NopCloser(buf)
-		fmt.Println("\n\n") // separate request and response with a space
+
+		fmt.Println("\n\n[HTTP Response:]")
 	}
 
 	resp, err := client.Do(req)
