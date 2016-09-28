@@ -90,6 +90,8 @@ func NewCommand() *Command {
 
 	fs.BoolVarP(&c.Verbose, "verbose", "v", false, "verbose output")
 
+	fs.Usage = c.Usage
+
 	return &c
 }
 
@@ -199,8 +201,22 @@ func (c *Command) ParseParam(arg string) (bool, error) {
 }
 
 func (c *Command) Usage() {
-	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "Usage: %s [OPTION]... [METHOD] url [DATA]...\n", os.Args[0])
+	fmt.Fprintf(os.Stderr,
+		"Requests url with METHOD, passing DATA in the request.\n")
+	fmt.Fprintf(os.Stderr,
+		"DATA can take any of the forms listed at the end of this output.\n\n")
+
 	c.flags.PrintDefaults()
+
+	fmt.Fprintf(os.Stderr, "\nData types:\n"+
+		"  DATA             VALUE                 LOCATION\n"+
+		"  Header:Value     Header: Value         Request header\n"+
+		"  query==param     ?query=param          Request URL\n"+
+		"  key=value        {'key': 'value'}      JSON Request body\n"+
+		"  key=123          {'key': '123'}        JSON Request body\n"+
+		"  key:=123         {'key': 123}          JSON Request body\n"+
+		"  key=value        key=value             Request body (with --form)\n")
 }
 
 // Request returns an `http.Request` representing the arguments entered by the
@@ -216,11 +232,13 @@ func (c *Command) Request() (*http.Request, error) {
 	// Encode body
 	contentType := c.Headers.Get("Content-Type")
 	if contentType == "" {
-		contentType = "application/json"
+		contentType = JSONContentType
 	}
 
 	var body io.Reader
 	if len(c.Data) > 0 {
+		c.Headers.Set("Content-Type", contentType)
+
 		var err error
 		body, err = MakeBody(contentType, c.Data)
 

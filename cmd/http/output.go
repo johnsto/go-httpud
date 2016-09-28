@@ -33,13 +33,13 @@ func PrintEntity(output *term.Output, writable Writable, contentType string,
 	r, w := io.Pipe()
 
 	// Write to pipe
-	go func() {
+	go func(w io.WriteCloser) {
 		err := writable.Write(w)
 		if err != nil {
 			log.Fatalln(err)
 		}
 		w.Close()
-	}()
+	}(w)
 
 	br := bufio.NewReader(r)
 

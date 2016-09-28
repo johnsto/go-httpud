@@ -55,9 +55,11 @@ func main() {
 	if cmd.Verbose {
 		fmt.Println("[HTTP Request:]")
 
-		// Write request body to a temporary buffer
-		buf := &bytes.Buffer{}
-		req.Body = ioutil.NopCloser(io.TeeReader(req.Body, buf))
+		var buf bytes.Buffer
+		if req.Body != nil {
+			// Write request body to a temporary buffer
+			req.Body = ioutil.NopCloser(io.TeeReader(req.Body, &buf))
+		}
 
 		// Emit to output
 		err = PrintEntity(output, req, req.Header.Get("Content-Type"),
@@ -70,8 +72,10 @@ func main() {
 			os.Exit(1)
 		}
 
-		// Reset request body
-		req.Body = ioutil.NopCloser(buf)
+		if req.Body != nil {
+			// Reset request body
+			req.Body = ioutil.NopCloser(&buf)
+		}
 
 		fmt.Println("\n\n[HTTP Response:]")
 	}
